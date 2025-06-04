@@ -7,25 +7,70 @@ class AuthManager {
     async login(username, password) {
         try {
             const credentials = btoa(`${username}:${password}`);
+            
             const response = await fetch(`${this.apiBase}/auth/signin`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Basic ${credentials}`,
-                    'Content-Type': 'application/json'
+                    'Authorization': `Basic ${credentials}`
                 }
             });
 
             if (!response.ok) {
-                throw new Error('Invalid credentials');
+                throw new Error(`Invalid credentials: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json();
-            this.token = data.token || data.access_token;
-            localStorage.setItem('jwt_token', this.token);
-            return this.token;
+            // Get raw token and clean it
+            let token = await response.text();
+            // Remove any quotes and whitespace
+            token = token.replace(/['"]+/g, '').trim();
+            
+            if (!token) {
+                throw new Error('No authentication token received');
+            }
+
+            // Validate token format
+            if (!this.isValidJWT(token)) {
+                throw new Error('Invalid token format received');
+            }
+
+            this.token = token;
+            localStorage.setItem('jwt_token', token);
+            return token;
+
         } catch (error) {
+            console.error('Login error:', error);
             throw new Error('Login failed: ' + error.message);
         }
+    }
+
+    isValidJWT(token) {
+        if (!token) return false;
+        const parts = token.split('.');
+        if (parts.length !== 3) return false;
+        
+        try {
+            // Check if each part is valid base64url
+            parts.forEach(part => {
+                // Add padding if necessary
+                const padding = '='.repeat((4 - part.length % 4) % 4);
+                const base64 = (part + padding)
+                    .replace(/-/g, '+')
+                    .replace(/_/g, '/');
+                atob(base64);
+            });
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    getToken() {
+        const token = localStorage.getItem('jwt_token');
+        if (!token || !this.isValidJWT(token)) {
+            this.logout();
+            return null;
+        }
+        return token;
     }
 
     logout() {
@@ -34,132 +79,26 @@ class AuthManager {
     }
 
     isAuthenticated() {
-        return !!this.token;
+        return !!this.getToken() && !this.isTokenExpired();
     }
 
-    getToken() {
-        return this.token;
-    }
-
-    // Decode JWT to get user info
     getUserInfo() {
-        if (!this.token) return null;
+        const token = this.getToken();
+        if (!token) return null;
+
         try {
-            const payload = JSON.parse(atob(this.token.split('.')[1]));
+            const parts = token.split('.');
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
             return payload;
         } catch (error) {
             console.error('Error decoding token:', error);
             return null;
         }
     }
-}
 
-// js/graphql.js - GraphQL client
-class GraphQLClient {
-    constructor(authManager) {
-        this.authManager = authManager;
-        this.endpoint = 'https://learn.zone01kisumu.ke/api/graphql-engine/v1/graphql';
-    }
-
-    async query(query, variables = {}) {
-        try {
-            const response = await fetch(this.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.authManager.getToken()}`
-                },
-                body: JSON.stringify({
-                    query,
-                    variables
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (result.errors) {
-                throw new Error(result.errors[0].message);
-            }
-
-            return result.data;
-        } catch (error) {
-            console.error('GraphQL query error:', error);
-            throw error;
-        }
-    }
-
-    // Get user profile data
-    async getUserProfile() {
-        const query = `
-                    query GetUserProfile {
-                        user {
-                            id
-                            login
-                        }
-                    }
-                `;
-        return this.query(query);
-    }
-
-    // Get XP transactions
-    async getXPTransactions() {
-        const query = `
-                    query GetXPTransactions {
-                        transaction(where: {type: {_eq: "xp"}}, order_by: {createdAt: asc}) {
-                            id
-                            amount
-                            createdAt
-                            path
-                            object {
-                                name
-                                type
-                            }
-                        }
-                    }
-                `;
-        return this.query(query);
-    }
-
-    // Get project results
-    async getProjectResults() {
-        const query = `
-                    query GetProjectResults {
-                        result {
-                            id
-                            grade
-                            type
-                            createdAt
-                            path
-                            object {
-                                name
-                                type
-                            }
-                        }
-                    }
-                `;
-        return this.query(query);
-    }
-
-    // Get progress data
-    async getProgressData() {
-        const query = `
-                    query GetProgressData {
-                        progress {
-                            id
-                            grade
-                            createdAt
-                            path
-                            object {
-                                name
-                                type
-                            }
-                        }
-                    }
-                `;
-        return this.query(query);
+    isTokenExpired() {
+        const userInfo = this.getUserInfo();
+        if (!userInfo || !userInfo.exp) return true;
+        return userInfo.exp < Math.floor(Date.now() / 1000);
     }
 }
