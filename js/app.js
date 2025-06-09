@@ -4,6 +4,7 @@ class ProfileApp {
         this.graphqlClient = new GraphQLClient(this.authManager);
         this.initializeEventListeners();
         this.checkAuthState();
+        this.xpData = [];
     }
 
     initializeEventListeners() {
@@ -16,6 +17,17 @@ class ProfileApp {
         // Logout button  
         document.getElementById('logoutBtn').addEventListener('click', () => {
             this.handleLogout();
+        });
+
+        // Reload button
+        document.getElementById('reload-btn')?.addEventListener('click', () => {
+            location.reload();
+        });
+
+        // Time range selector
+        document.getElementById("xp-time-range")?.addEventListener("change", (e) => {
+            const months = Number.parseInt(e.target.value);
+            this.updateXPChartTimeRange(months);
         });
     }
 
@@ -55,7 +67,6 @@ class ProfileApp {
             return;
         }
 
-        // Show loading state
         loginBtn.disabled = true;
         loginText.classList.add('hidden');
         loginSpinner.classList.remove('hidden');
@@ -64,16 +75,13 @@ class ProfileApp {
         try {
             console.log('Starting login process...');
             
-            // Step 1: Authenticate and get token
             const token = await this.authManager.login(username, password);
             console.log('Login successful, token received');
 
-            // Step 2: Test the GraphQL connection
             console.log('Testing GraphQL connection...');
             await this.graphqlClient.testQuery();
             console.log('GraphQL connection test successful');
 
-            // Step 3: Show dashboard and load data
             this.showDashboard();
             await this.loadDashboardData();
 
@@ -82,7 +90,6 @@ class ProfileApp {
             errorDiv.textContent = error.message || 'Login failed. Please check your credentials.';
             errorDiv.classList.remove('hidden');
         } finally {
-            // Reset loading state
             loginBtn.disabled = false;
             loginText.classList.remove('hidden');
             loginSpinner.classList.add('hidden');
@@ -93,10 +100,8 @@ class ProfileApp {
         console.log('Logging out...');
         this.authManager.logout();
         this.showLogin();
-        // Clear form
         document.getElementById('loginForm').reset();
         document.getElementById('errorMessage').classList.add('hidden');
-        // Reset dashboard data
         this.resetDashboard();
     }
 
@@ -106,79 +111,65 @@ class ProfileApp {
         document.getElementById('totalXP').textContent = '0';
         document.getElementById('projectsCount').textContent = '0';
         document.getElementById('auditRatio').textContent = '0%';
-        document.getElementById('passRate').textContent = '0%';
         
-        // Clear charts
-        document.getElementById('xpChart').innerHTML = '';
-        document.getElementById('successChart').innerHTML = '';
+        document.getElementById('xp-chart-container').innerHTML = '';
+        document.getElementById('skills-chart-container').innerHTML = '';
+        document.getElementById('audit-chart-container').innerHTML = '';
     }
 
     async loadDashboardData() {
         try {
             console.log('Loading dashboard data...');
-
-            // Load user profile first
+            document.getElementById('loading-indicator').textContent = 'Loading your data...';
+            document.getElementById('profile-content').classList.add('hidden');
+    
             console.log('Fetching user profile...');
             const userProfile = await this.graphqlClient.getUserProfile();
             console.log('User profile loaded:', userProfile);
             
-            if (userProfile.user && userProfile.user.length > 0) {
+            if (userProfile?.user?.length > 0) {
                 this.updateUserInfo(userProfile.user[0]);
+            } else {
+                throw new Error('No user profile data received');
             }
-
-            // Load XP transactions
+    
             console.log('Fetching XP transactions...');
             const xpData = await this.graphqlClient.getXPTransactions();
             console.log('XP data loaded:', xpData);
+            this.xpData = xpData?.transaction || [];
             
-            if (xpData.transaction) {
-                this.updateXPStats(xpData.transaction);
-                // Generate XP chart
-                ChartGenerator.createXPChart(xpData.transaction, 'xpChart');
+            if (this.xpData.length > 0) {
+                this.updateXPStats(this.xpData);
+                this.updateXPChartTimeRange(6);
             }
-
-            // Load project results
+    
             console.log('Fetching project results...');
             const resultsData = await this.graphqlClient.getProjectResults();
             console.log('Results data loaded:', resultsData);
             
-            if (resultsData.result) {
+            if (resultsData?.result) {
                 this.updateProjectStats(resultsData.result);
-                // Generate success chart
-                ChartGenerator.createSuccessChart(resultsData.result, 'successChart');
             }
-
-            // Try to load audit data for audit ratio
-            try {
-                console.log('Fetching audit data...');
-                const auditData = await this.graphqlClient.getAuditData();
-                console.log('Audit data loaded:', auditData);
-                if (auditData.transaction) {
-                    this.updateAuditStats(auditData.transaction);
-                }
-            } catch (auditError) {
-                console.warn('Could not load audit data:', auditError.message);
+    
+            console.log('Fetching audit data...');
+            const auditData = await this.graphqlClient.getAuditData();
+            console.log('Audit data loaded:', auditData);
+            if (auditData?.transaction) {
+                this.updateAuditStats(auditData.transaction);
             }
-
-            console.log('Dashboard data loading completed');
-
+    
+            document.getElementById('loading-indicator').classList.add('hidden');
+            document.getElementById('profile-content').classList.remove('hidden');
+    
         } catch (error) {
             console.error('Error loading dashboard data:', error);
+            document.getElementById('loading-indicator').textContent = 'Error loading data. Please try again.';
             
-            // Show user-friendly error message
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'error-message';
-            errorMessage.textContent = 'Failed to load some dashboard data. Please try refreshing the page.';
-            
-            const dashboard = document.getElementById('dashboard');
-            dashboard.insertBefore(errorMessage, dashboard.firstChild);
-            
-            // Remove error message after 5 seconds
-            setTimeout(() => {
-                if (errorMessage.parentNode) {
-                    errorMessage.parentNode.removeChild(errorMessage);
-                }
-            }, 5000);
+            const errorElement = document.getElementById('errorMessage');
+            if (errorElement) {
+                errorElement.textContent = error.message || 'Failed to load dashboard data';
+                errorElement.classList.remove('hidden');
+            }
         }
     }
 
@@ -186,38 +177,75 @@ class ProfileApp {
         console.log('Updating user info:', user);
         document.getElementById('userName').textContent = `Welcome back, ${user.login}!`;
         document.getElementById('userDetails').textContent = `User ID: ${user.id} | Joined: ${new Date(user.createdAt).toLocaleDateString()}`;
+        document.getElementById('profile-initial').textContent = user.login.charAt(0).toUpperCase();
+        document.getElementById('profile-name').textContent = user.login;
     }
 
     updateXPStats(transactions) {
+        if (!transactions || !Array.isArray(transactions)) return;
+        
         console.log('Updating XP stats with', transactions.length, 'transactions');
         const totalXP = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-        document.getElementById('totalXP').textContent = totalXP.toLocaleString();
+        const xpElement = document.getElementById('totalXP');
+        if (xpElement) {
+            xpElement.textContent = totalXP.toLocaleString();
+        }
     }
 
     updateProjectStats(results) {
         console.log('Updating project stats with', results.length, 'results');
         const totalProjects = results.length;
         const passedProjects = results.filter(r => r.grade && r.grade > 0).length;
-        const passRate = totalProjects > 0 ? Math.round((passedProjects / totalProjects) * 100) : 0;
-
+        
         document.getElementById('projectsCount').textContent = totalProjects;
-        document.getElementById('passRate').textContent = passRate + '%';
+        document.getElementById('completed-projects').textContent = passedProjects;
     }
 
     updateAuditStats(auditTransactions) {
+        if (!auditTransactions || !Array.isArray(auditTransactions)) return;
+        
         console.log('Updating audit stats with', auditTransactions.length, 'audit transactions');
         
-        const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + t.amount, 0);
-        const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + t.amount, 0);
+        const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + (t.amount || 0), 0);
+        const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + (t.amount || 0), 0);
         
         const totalVotes = upVotes + downVotes;
         const auditRatio = totalVotes > 0 ? Math.round((upVotes / totalVotes) * 100) : 0;
         
-        document.getElementById('auditRatio').textContent = auditRatio + '%';
+        const ratioElement = document.getElementById('auditRatio');
+        if (ratioElement) {
+            ratioElement.textContent = auditRatio + '%';
+        }
+        
+        if (upVotes > 0 || downVotes > 0) {
+            ChartGenerator.createAuditDoughnutChart(upVotes, downVotes, 'audit-chart-container');
+        }
+    }
+
+    updateXPChartTimeRange(months) {
+        if (!this.xpData || this.xpData.length === 0) return;
+
+        if (months === 0) {
+            ChartGenerator.createXPChart(this.xpData, 'xp-chart-container');
+            return;
+        }
+
+        const currentDate = new Date();
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(currentDate.getMonth() - months);
+
+        const filteredData = this.xpData.filter(item => new Date(item.createdAt) >= cutoffDate);
+        
+        if (filteredData.length === 0) {
+            document.getElementById("xp-chart-container").innerHTML =
+                '<p class="error-message">No XP data available for the selected time period.</p>';
+            return;
+        }
+
+        ChartGenerator.createXPChart(filteredData, 'xp-chart-container');
     }
 }
 
-// Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing ProfileApp...');
     new ProfileApp();
