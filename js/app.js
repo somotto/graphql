@@ -74,7 +74,7 @@ class ProfileApp {
 
         try {
             console.log('Starting login process...');
-            
+
             const token = await this.authManager.login(username, password);
             console.log('Login successful, token received');
 
@@ -111,7 +111,7 @@ class ProfileApp {
         document.getElementById('totalXP').textContent = '0';
         document.getElementById('projectsCount').textContent = '0';
         document.getElementById('auditRatio').textContent = '0%';
-        
+
         document.getElementById('xp-chart-container').innerHTML = '';
         document.getElementById('skills-chart-container').innerHTML = '';
         document.getElementById('audit-chart-container').innerHTML = '';
@@ -122,73 +122,160 @@ class ProfileApp {
             console.log('Loading dashboard data...');
             document.getElementById('loading-indicator').textContent = 'Loading your data...';
             document.getElementById('profile-content').classList.add('hidden');
-    
-            console.log('Fetching user profile...');
+
+            // First load essential data
             const userProfile = await this.graphqlClient.getUserProfile();
-            console.log('User profile loaded:', userProfile);
-            
             if (userProfile?.user?.length > 0) {
                 this.updateUserInfo(userProfile.user[0]);
-            } else {
-                throw new Error('No user profile data received');
             }
-    
-            console.log('Fetching XP transactions...');
-            const xpData = await this.graphqlClient.getXPTransactions();
-            console.log('XP data loaded:', xpData);
+
+        
+
+            // Then load other data in parallel
+            const [xpData, resultsData, auditData] = await Promise.all([
+                this.graphqlClient.getXPTransactions(),
+                this.graphqlClient.getProjectResults(),
+                this.graphqlClient.getAuditData()
+            ]);
+
             this.xpData = xpData?.transaction || [];
-            
             if (this.xpData.length > 0) {
                 this.updateXPStats(this.xpData);
                 this.updateXPChartTimeRange(6);
             }
-    
-            console.log('Fetching project results...');
-            const resultsData = await this.graphqlClient.getProjectResults();
-            console.log('Results data loaded:', resultsData);
-            
+
             if (resultsData?.result) {
                 this.updateProjectStats(resultsData.result);
             }
-    
-            console.log('Fetching audit data...');
-            const auditData = await this.graphqlClient.getAuditData();
-            console.log('Audit data loaded:', auditData);
+
             if (auditData?.transaction) {
                 this.updateAuditStats(auditData.transaction);
             }
-    
+
+            // Try to load skills if available
+            try {
+                const skillsData = await this.graphqlClient.getSkills();
+                if (skillsData?.skill) {
+                    this.updateSkills(skillsData.skill);
+                }
+            } catch (skillsError) {
+                console.log('Skills data not available:', skillsError);
+            }
+
             document.getElementById('loading-indicator').classList.add('hidden');
             document.getElementById('profile-content').classList.remove('hidden');
-    
+
         } catch (error) {
             console.error('Error loading dashboard data:', error);
             document.getElementById('loading-indicator').textContent = 'Error loading data. Please try again.';
-            
-            const errorElement = document.getElementById('errorMessage');
-            if (errorElement) {
-                errorElement.textContent = error.message || 'Failed to load dashboard data';
-                errorElement.classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = error.message;
+            document.getElementById('errorMessage').classList.remove('hidden');
+        }
+    }
+
+    // Update getUserProfile query
+    async getUserProfile() {
+        const query = `
+        query GetUserProfile {
+            user {
+                id
+                login
+                email
+                totalUp
+                totalDown
+                createdAt
+                updatedAt
+                attrs
             }
         }
+    `;
+        return this.query(query);
     }
 
     updateUserInfo(user) {
         console.log('Updating user info:', user);
         document.getElementById('userName').textContent = `Welcome back, ${user.login}!`;
-        document.getElementById('userDetails').textContent = `User ID: ${user.id} | Joined: ${new Date(user.createdAt).toLocaleDateString()}`;
         document.getElementById('profile-initial').textContent = user.login.charAt(0).toUpperCase();
         document.getElementById('profile-name').textContent = user.login;
+
+        document.getElementById('profile-email').textContent = user.email || 'Not provided';
+
+        document.getElementById('profile-phone').textContent = 'Not available';
+        document.getElementById('profile-country').textContent = 'Not available';
     }
 
-    updateXPStats(transactions) {
-        if (!transactions || !Array.isArray(transactions)) return;
+    updateSkills(skills) {
+        const skillsContainer = document.getElementById('skills-chart-container');
+        if (!skills || skills.length === 0) {
+            skillsContainer.innerHTML = '<p>No skills data available</p>';
+            return;
+        }
+
+        // Implement your skills visualization here
+        // This could be a radar chart or simple list
+    }
+
+    updateRankInfo(user) {
+        if (user.attrs && user.attrs.rank) {
+            document.getElementById('current-rank').textContent = user.attrs.rank;
+        }
+
+        // Implement rank progress calculation based on your platform's logic
+        // This might require additional queries or calculations
+    }
+
+   // Update the updateXPStats method in ProfileApp class
+
+updateXPStats(transactions) {
+    if (!transactions || !Array.isArray(transactions)) return;
+    
+    // Calculate total XP excluding duplicates
+    const uniqueTransactions = new Map();
+    
+    transactions.forEach(t => {
+        const key = `${t.path}-${t.amount}`;
+        if (!uniqueTransactions.has(key)) {
+            uniqueTransactions.set(key, t);
+        }
+    });
+
+    const totalXP = Array.from(uniqueTransactions.values())
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Format XP display
+    const xpElement = document.getElementById('totalXP');
+    if (xpElement) {
+        if (totalXP >= 1000000) {
+            xpElement.textContent = (totalXP / 1000000).toFixed(2) + 'M';
+        } else if (totalXP >= 1000) {
+            xpElement.textContent = (totalXP / 1000).toFixed(1) + 'K';
+        } else {
+            xpElement.textContent = totalXP.toString();
+        }
+    }
+
+    // Store XP data for charts
+    this.xpData = Array.from(uniqueTransactions.values())
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+    
+    updateAuditStats(auditTransactions) {
+        if (!auditTransactions || !Array.isArray(auditTransactions)) return;
         
-        console.log('Updating XP stats with', transactions.length, 'transactions');
-        const totalXP = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-        const xpElement = document.getElementById('totalXP');
-        if (xpElement) {
-            xpElement.textContent = totalXP.toLocaleString();
+        const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + (t.amount || 0), 0);
+        const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        const totalVotes = upVotes + downVotes;
+        const ratioElement = document.getElementById('auditRatio');
+        if (ratioElement) {
+            // Format as decimal with 2 decimal places
+            ratioElement.textContent = totalVotes > 0 
+                ? (upVotes / totalVotes).toFixed(2)
+                : '0.00';
+        }
+        
+        if (upVotes > 0 || downVotes > 0) {
+            ChartGenerator.createAuditDoughnutChart(upVotes, downVotes, 'audit-chart-container');
         }
     }
 
@@ -196,27 +283,27 @@ class ProfileApp {
         console.log('Updating project stats with', results.length, 'results');
         const totalProjects = results.length;
         const passedProjects = results.filter(r => r.grade && r.grade > 0).length;
-        
+
         document.getElementById('projectsCount').textContent = totalProjects;
         document.getElementById('completed-projects').textContent = passedProjects;
     }
 
     updateAuditStats(auditTransactions) {
         if (!auditTransactions || !Array.isArray(auditTransactions)) return;
-        
+
         console.log('Updating audit stats with', auditTransactions.length, 'audit transactions');
-        
+
         const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + (t.amount || 0), 0);
         const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + (t.amount || 0), 0);
-        
+
         const totalVotes = upVotes + downVotes;
         const auditRatio = totalVotes > 0 ? Math.round((upVotes / totalVotes) * 100) : 0;
-        
+
         const ratioElement = document.getElementById('auditRatio');
         if (ratioElement) {
             ratioElement.textContent = auditRatio + '%';
         }
-        
+
         if (upVotes > 0 || downVotes > 0) {
             ChartGenerator.createAuditDoughnutChart(upVotes, downVotes, 'audit-chart-container');
         }
@@ -235,7 +322,7 @@ class ProfileApp {
         cutoffDate.setMonth(currentDate.getMonth() - months);
 
         const filteredData = this.xpData.filter(item => new Date(item.createdAt) >= cutoffDate);
-        
+
         if (filteredData.length === 0) {
             document.getElementById("xp-chart-container").innerHTML =
                 '<p class="error-message">No XP data available for the selected time period.</p>';
