@@ -60,13 +60,29 @@ class GraphQLClient {
                 user {
                     id
                     login
+                    email
                     totalUp
                     totalDown
                     createdAt
                     updatedAt
+                    attrs
                 }
             }
         `;
+        return this.query(query);
+    }
+
+    // Add new query for skills
+    async getSkills() {
+        const query = `
+        query GetSkills {
+            skill {
+                id
+                name
+                level
+            }
+        }
+    `;
         return this.query(query);
     }
 
@@ -91,7 +107,13 @@ class GraphQLClient {
     async getProjectResults() {
         const query = `
             query GetProjectResults {
-                result {
+                result(
+                    where: { 
+                        grade: { _eq: 0 },
+                        object: { type: { _eq: "project" } }
+                    }
+                    order_by: { createdAt: desc }
+                ) {
                     id
                     grade
                     createdAt
@@ -105,6 +127,39 @@ class GraphQLClient {
                 }
             }
         `;
+        return this.query(query);
+    }
+
+    async getRankInfo() {
+        const query = `
+            query GetRankInfo {
+                user {
+                    id
+                    login
+                    attrs
+                }
+            }
+        `;
+        return this.query(query);
+    }
+
+    // Add this query method to GraphQLClient class
+
+    async getAllXP() {
+        const query = `
+        query GetAllXP {
+            transaction(
+                where: { 
+                    type: { _eq: "xp" },
+                    eventId: { _is_null: true }
+                }
+            ) {
+                amount
+                createdAt
+                path
+            }
+        }
+    `;
         return this.query(query);
     }
 
@@ -162,14 +217,16 @@ class GraphQLClient {
     }
 
     // Introspection query to see available fields
-    async introspectSchema() {
+    async introspectUserType() {
         const query = `
-            query IntrospectionQuery {
-                __schema {
-                    queryType {
-                        fields {
+            query IntrospectUser {
+                __type(name: "user") {
+                    name
+                    fields {
+                        name
+                        type {
                             name
-                            description
+                            kind
                         }
                     }
                 }
