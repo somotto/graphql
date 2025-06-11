@@ -107,23 +107,23 @@ class GraphQLClient {
     async getProjectResults() {
         const query = `
             query GetProjectResults {
-                result(
+                progress(
                     where: { 
-                        grade: { _eq: 0 },
+                        isDone: { _eq: false },
                         object: { type: { _eq: "project" } }
                     }
-                    order_by: { createdAt: desc }
+                    order_by: { updatedAt: desc }
                 ) {
                     id
-                    grade
-                    createdAt
-                    updatedAt
-                    path
-                    objectId
                     object {
+                        id
                         name
                         type
                     }
+                    isDone
+                    grade
+                    updatedAt
+                    path
                 }
             }
         `;
