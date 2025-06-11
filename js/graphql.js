@@ -116,14 +116,10 @@ class GraphQLClient {
                 ) {
                     id
                     object {
-                        id
                         name
-                        type
                     }
-                    isDone
-                    grade
-                    updatedAt
                     path
+                    updatedAt
                 }
             }
         `;
