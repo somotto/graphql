@@ -129,12 +129,10 @@ class ProfileApp {
                 this.updateUserInfo(userProfile.user[0]);
             }
 
-        
-
             // Then load other data in parallel
-            const [xpData, resultsData, auditData] = await Promise.all([
+            const [xpData, projectsData, auditData] = await Promise.all([
                 this.graphqlClient.getXPTransactions(),
-                this.graphqlClient.getProjectResults(),
+                this.graphqlClient.getProjectResults(),  // This now returns pending projects
                 this.graphqlClient.getAuditData()
             ]);
 
@@ -144,8 +142,12 @@ class ProfileApp {
                 this.updateXPChartTimeRange(6);
             }
 
-            if (resultsData?.result) {
-                this.updateProjectStats(resultsData.result);
+            if (projectsData?.result) {
+                this.updateProjectStats(projectsData.result);
+            }
+
+            if (projectsData?.progress) {
+                this.updatePendingProjects(projectsData.progress);
             }
 
             if (auditData?.transaction) {
@@ -224,56 +226,56 @@ class ProfileApp {
         // This might require additional queries or calculations
     }
 
-   // Update the updateXPStats method in ProfileApp class
+    // Update the updateXPStats method in ProfileApp class
 
-updateXPStats(transactions) {
-    if (!transactions || !Array.isArray(transactions)) return;
-    
-    // Calculate total XP excluding duplicates
-    const uniqueTransactions = new Map();
-    
-    transactions.forEach(t => {
-        const key = `${t.path}-${t.amount}`;
-        if (!uniqueTransactions.has(key)) {
-            uniqueTransactions.set(key, t);
+    updateXPStats(transactions) {
+        if (!transactions || !Array.isArray(transactions)) return;
+
+        // Calculate total XP excluding duplicates
+        const uniqueTransactions = new Map();
+
+        transactions.forEach(t => {
+            const key = `${t.path}-${t.amount}`;
+            if (!uniqueTransactions.has(key)) {
+                uniqueTransactions.set(key, t);
+            }
+        });
+
+        const totalXP = Array.from(uniqueTransactions.values())
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        // Format XP display
+        const xpElement = document.getElementById('totalXP');
+        if (xpElement) {
+            if (totalXP >= 1000000) {
+                xpElement.textContent = (totalXP / 1000000).toFixed(2) + 'M';
+            } else if (totalXP >= 1000) {
+                xpElement.textContent = (totalXP / 1000).toFixed(1) + 'K';
+            } else {
+                xpElement.textContent = totalXP.toString();
+            }
         }
-    });
 
-    const totalXP = Array.from(uniqueTransactions.values())
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-    // Format XP display
-    const xpElement = document.getElementById('totalXP');
-    if (xpElement) {
-        if (totalXP >= 1000000) {
-            xpElement.textContent = (totalXP / 1000000).toFixed(2) + 'M';
-        } else if (totalXP >= 1000) {
-            xpElement.textContent = (totalXP / 1000).toFixed(1) + 'K';
-        } else {
-            xpElement.textContent = totalXP.toString();
-        }
+        // Store XP data for charts
+        this.xpData = Array.from(uniqueTransactions.values())
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     }
 
-    // Store XP data for charts
-    this.xpData = Array.from(uniqueTransactions.values())
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-}
-    
     updateAuditStats(auditTransactions) {
         if (!auditTransactions || !Array.isArray(auditTransactions)) return;
-        
+
         const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + (t.amount || 0), 0);
         const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + (t.amount || 0), 0);
-        
+
         const totalVotes = upVotes + downVotes;
         const ratioElement = document.getElementById('auditRatio');
         if (ratioElement) {
             // Format as decimal with 2 decimal places
-            ratioElement.textContent = totalVotes > 0 
+            ratioElement.textContent = totalVotes > 0
                 ? (upVotes / totalVotes).toFixed(2)
                 : '0.00';
         }
-        
+
         if (upVotes > 0 || downVotes > 0) {
             ChartGenerator.createAuditDoughnutChart(upVotes, downVotes, 'audit-chart-container');
         }
@@ -330,6 +332,27 @@ updateXPStats(transactions) {
         }
 
         ChartGenerator.createXPChart(filteredData, 'xp-chart-container');
+    }
+
+    updatePendingProjects(projects) {
+        const container = document.getElementById('pending-projects');
+        if (!projects || !projects.length) {
+            container.innerHTML = '<p class="text-muted">No pending projects</p>';
+            return;
+        }
+
+        container.innerHTML = projects
+            .map(project => `
+                <div class="project-card">
+                    <div class="flex justify-between items-center">
+                        <h4 class="project-name">${project.object.name}</h4>
+                        <span class="project-grade">${project.grade || 0}%</span>
+                    </div>
+                    <p class="project-path">${project.path}</p>
+                    <p class="project-date">Last updated: ${new Date(project.updatedAt).toLocaleDateString()}</p>
+                </div>
+            `)
+            .join('');
     }
 }
 
