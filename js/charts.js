@@ -115,85 +115,88 @@ class ChartGenerator {
     static createAuditDoughnutChart(done, received, containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
-
+    
         container.innerHTML = '';
-
+    
         const width = container.clientWidth || 400;
         const height = 300;
         const centerX = width / 2;
         const centerY = height / 2;
         const radius = Math.min(width, height) / 4;
-        const innerRadius = radius * 0.6;
-
+        const innerRadius = radius * 0.6; // Creates the donut hole
+        
         const total = done + received;
         if (total === 0) {
-            container.innerHTML = '<p>No audit data available</p>';
+            container.innerHTML = '<p style="text-align: center; color: #a0aec0;">No audit data available</p>';
             return;
         }
-
-        const donePercentage = (done / total) * 100;
-        const receivedPercentage = (received / total) * 100;
-
+    
+        const doneAngle = (done / total) * Math.PI * 2;
+        
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         svg.setAttribute('width', '100%');
-
-        const doneSlice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const doneAngle = (donePercentage / 100) * 360;
-        const doneRadians = (doneAngle - 90) * (Math.PI / 180);
-        const doneX = centerX + radius * Math.cos(doneRadians);
-        const doneY = centerY + radius * Math.sin(doneRadians);
-        
-        doneSlice.setAttribute('d', `
-            M ${centerX} ${centerY}
-            L ${centerX} ${centerY - radius}
-            A ${radius} ${radius} 0 ${doneAngle > 180 ? 1 : 0} 1 ${doneX} ${doneY}
-            Z
-        `);
-        doneSlice.setAttribute('fill', '#00f5ff');
-        doneSlice.setAttribute('opacity', '0.7');
+    
+        // Create donut slices
+        const createArc = (startAngle, endAngle, color) => {
+            const x1 = centerX + radius * Math.cos(startAngle - Math.PI / 2);
+            const y1 = centerY + radius * Math.sin(startAngle - Math.PI / 2);
+            const x2 = centerX + radius * Math.cos(endAngle - Math.PI / 2);
+            const y2 = centerY + radius * Math.sin(endAngle - Math.PI / 2);
+            
+            const xi1 = centerX + innerRadius * Math.cos(startAngle - Math.PI / 2);
+            const yi1 = centerY + innerRadius * Math.sin(startAngle - Math.PI / 2);
+            const xi2 = centerX + innerRadius * Math.cos(endAngle - Math.PI / 2);
+            const yi2 = centerY + innerRadius * Math.sin(endAngle - Math.PI / 2);
+    
+            const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+    
+            const d = [
+                `M ${x1} ${y1}`,
+                `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+                `L ${xi2} ${yi2}`,
+                `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${xi1} ${yi1}`,
+                'Z'
+            ].join(' ');
+    
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', d);
+            path.setAttribute('fill', color);
+            path.setAttribute('stroke', 'rgba(255, 255, 255, 0.1)');
+            path.setAttribute('stroke-width', '1');
+            return path;
+        };
+    
+        // Add done slice (left)
+        const doneSlice = createArc(0, doneAngle, '#00cc66');
         svg.appendChild(doneSlice);
-
-        // Received slice
-        const receivedSlice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        receivedSlice.setAttribute('d', `
-            M ${centerX} ${centerY}
-            L ${doneX} ${doneY}
-            A ${radius} ${radius} 0 ${receivedPercentage > 180 ? 1 : 0} 1 ${centerX} ${centerY - radius}
-            Z
-        `);
-        receivedSlice.setAttribute('fill', '#8a2be2');
-        receivedSlice.setAttribute('opacity', '0.7');
+    
+        // Add received slice (right)
+        const receivedSlice = createArc(doneAngle, Math.PI * 2, '#0066cc');
         svg.appendChild(receivedSlice);
-
-        // Center text
+    
+        // Add center values
         const centerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         centerText.setAttribute('x', centerX);
-        centerText.setAttribute('y', centerY - 10);
+        centerText.setAttribute('y', centerY);
         centerText.setAttribute('text-anchor', 'middle');
+        centerText.setAttribute('dominant-baseline', 'middle');
         centerText.setAttribute('fill', 'white');
-        centerText.setAttribute('font-size', '20');
-        centerText.textContent = `${Math.round(donePercentage)}%`;
+        centerText.setAttribute('font-size', '24');
+        centerText.textContent = `${Math.round((done / total) * 100)}%`;
         svg.appendChild(centerText);
-
-        const centerLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        centerLabel.setAttribute('x', centerX);
-        centerLabel.setAttribute('y', centerY + 15);
-        centerLabel.setAttribute('text-anchor', 'middle');
-        centerLabel.setAttribute('fill', '#a0aec0');
-        centerLabel.setAttribute('font-size', '12');
-        centerLabel.textContent = 'Done';
-        svg.appendChild(centerLabel);
-
-        const legendY = centerY + radius + 30;
-
+    
+        // Add legend
+        const legendY = height - 40;
+    
+        // Done legend
         const doneLegend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        doneLegend.setAttribute('transform', `translate(${centerX - 60}, ${legendY})`);
+        doneLegend.setAttribute('transform', `translate(${centerX - 100}, ${legendY})`);
         
         const doneRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         doneRect.setAttribute('width', 12);
         doneRect.setAttribute('height', 12);
-        doneRect.setAttribute('fill', '#00f5ff');
+        doneRect.setAttribute('fill', '#00cc66');
         doneLegend.appendChild(doneRect);
         
         const doneText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -203,8 +206,9 @@ class ChartGenerator {
         doneText.setAttribute('font-size', '12');
         doneText.textContent = `Done: ${done}`;
         doneLegend.appendChild(doneText);
+        
         svg.appendChild(doneLegend);
-
+    
         // Received legend
         const receivedLegend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         receivedLegend.setAttribute('transform', `translate(${centerX + 20}, ${legendY})`);
@@ -212,7 +216,7 @@ class ChartGenerator {
         const receivedRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         receivedRect.setAttribute('width', 12);
         receivedRect.setAttribute('height', 12);
-        receivedRect.setAttribute('fill', '#8a2be2');
+        receivedRect.setAttribute('fill', '#0066cc');
         receivedLegend.appendChild(receivedRect);
         
         const receivedText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -222,8 +226,9 @@ class ChartGenerator {
         receivedText.setAttribute('font-size', '12');
         receivedText.textContent = `Received: ${received}`;
         receivedLegend.appendChild(receivedText);
+        
         svg.appendChild(receivedLegend);
-
+    
         container.appendChild(svg);
     }
 }
