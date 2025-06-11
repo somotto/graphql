@@ -5,17 +5,24 @@
 }
 
 :root {
-    --primary-color: #2563eb;
-    --secondary-color: #1e40af;
-    --success-color: #10b981;
-    --error-color: #ef4444;
-    --warning-color: #f59e0b;
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --border-color: #e2e8f0;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    /* Primary Theme Colors */
+    --primary-blue: #0066cc;
+    --secondary-blue: #003d99;
+    --accent-green: #00cc66;
+    --accent-yellow: #ffd700;
+    
+    /* UI Colors */
+    --text-white: #ffffff;
+    --text-light: #e6f3ff;
+    --bg-dark: #001a33;
+    --bg-light: #f0f8ff;
+    --card-bg: rgba(255, 255, 255, 0.1);
+    --border-light: rgba(255, 255, 255, 0.2);
+    
+    /* Status Colors */
+    --success: var(--accent-green);
+    --warning: var(--accent-yellow);
+    --error: #ff3333;
 }
 
 body {
@@ -254,34 +261,59 @@ svg {
     --glass-border: rgba(255, 255, 255, 0.1);
 }
 
+:root {
+    --primary: var(--primary-blue);
+    --secondary: var(--secondary-blue);
+    --dark: var(--bg-dark);
+    --light: var(--text-light);
+    --glass-bg: rgba(0, 26, 51, 0.7);
+    --glass-border: var(--border-light);
+}
+
 body.tech-gradient {
-    background: linear-gradient(135deg, var(--darker), var(--dark));
-    color: white;
-    font-family: 'Courier New', monospace;
-    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg-dark), var(--secondary-blue));
+    color: var(--text-white);
 }
 
 .neon-text {
-    color: var(--primary);
-    text-shadow: 0 0 5px var(--primary), 0 0 10px var(--primary);
+    color: var(--text-white);
+    text-shadow: 0 0 5px var(--primary-blue), 0 0 10px var(--accent-green);
 }
 
 .cyber-button {
     background: transparent;
-    border: 1px solid var(--primary);
-    color: var(--primary);
-    padding: 0.5rem 1rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    border: 1px solid var(--primary-blue);
+    color: var(--text-white);
 }
 
 .cyber-button:hover {
-    background: rgba(0, 245, 255, 0.1);
-    box-shadow: 0 0 10px var(--primary);
+    background: rgba(0, 102, 204, 0.2);
+    box-shadow: 0 0 10px var(--primary-blue);
 }
 
+.chart-container path {
+    stroke: var(--primary-blue);
+}
+
+.chart-container circle {
+    fill: var(--accent-green);
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, var(--primary-blue), var(--accent-green));
+}
+
+.stat-info p:first-child {
+    color: var(--accent-yellow);
+}
+
+.audit-up {
+    fill: var(--accent-green);
+}
+
+.audit-down {
+    fill: var(--primary-blue);
+}
 .card-glass {
     background: var(--glass-bg);
     backdrop-filter: blur(10px);
