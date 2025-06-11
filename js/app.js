@@ -344,12 +344,8 @@ class ProfileApp {
         container.innerHTML = projects
             .map(project => `
                 <div class="project-card">
-                    <div class="flex justify-between items-center">
-                        <h4 class="project-name">${project.object.name}</h4>
-                        <span class="project-grade">${project.grade || 0}%</span>
-                    </div>
+                    <h4 class="project-name">${project.object.name}</h4>
                     <p class="project-path">${project.path}</p>
-                    <p class="project-date">Last updated: ${new Date(project.updatedAt).toLocaleDateString()}</p>
                 </div>
             `)
             .join('');
