@@ -112,14 +112,14 @@ class GraphQLClient {
                         isDone: { _eq: false },
                         object: { type: { _eq: "project" } }
                     }
-                    order_by: { updatedAt: desc }
+                    order_by: { createdAt: desc }
                 ) {
                     id
                     object {
                         name
                     }
                     path
-                    updatedAt
+                    createdAt
                 }
             }
         `;
