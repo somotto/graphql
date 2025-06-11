@@ -340,14 +340,23 @@ class ProfileApp {
             container.innerHTML = '<p class="text-muted">No pending projects</p>';
             return;
         }
-
+    
         container.innerHTML = projects
-            .map(project => `
-                <div class="project-card">
-                    <h4 class="project-name">${project.object.name}</h4>
-                    <p class="project-path">${project.path}</p>
-                </div>
-            `)
+            .map(project => {
+                const startDate = new Date(project.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                return `
+                    <div class="project-card">
+                        <h4 class="project-name">${project.object.name}</h4>
+                        <p class="project-path">${project.path}</p>
+                        <p class="project-date">Started: ${startDate}</p>
+                    </div>
+                `;
+            })
             .join('');
     }
 }
