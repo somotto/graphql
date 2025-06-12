@@ -1,3 +1,14 @@
+const RANK_CONFIG = [
+    { name: "Aspiring Developer", minLevel: 0, maxLevel: 9 },
+    { name: "Beginner Developer", minLevel: 10, maxLevel: 20 },
+    { name: "Apprentice Developer", minLevel: 20, maxLevel: 29 },
+    { name: "Assistant Developer", minLevel: 30, maxLevel: 39 },
+    { name: "Basic Developer", minLevel: 40, maxLevel: 49 },
+    { name: "Junior Developer", minLevel: 50, maxLevel: 54 },
+    { name: "Confirmed Developer", minLevel: 55, maxLevel: 59 },
+    { name: "Full-Stack Developer", minLevel: 60, maxLevel: null }
+];
+
 class ProfileApp {
     constructor() {
         this.authManager = new AuthManager();
@@ -132,7 +143,7 @@ class ProfileApp {
             // Then load other data in parallel
             const [xpData, projectsData, auditData] = await Promise.all([
                 this.graphqlClient.getXPTransactions(),
-                this.graphqlClient.getProjectResults(),  // This now returns pending projects
+                this.graphqlClient.getProjectResults(), 
                 this.graphqlClient.getAuditData()
             ]);
 
@@ -213,8 +224,6 @@ class ProfileApp {
             return;
         }
 
-        // Implement your skills visualization here
-        // This could be a radar chart or simple list
     }
 
     updateRankInfo(user) {
@@ -222,21 +231,31 @@ class ProfileApp {
             document.getElementById('current-rank').textContent = user.attrs.rank;
         }
 
-        // Implement rank progress calculation based on your platform's logic
-        // This might require additional queries or calculations
+    }
+    calculateLevel(totalXP) {
+        return Math.floor(Math.log2(totalXP / 1000 + 1));
     }
 
-    // Update the updateXPStats method in ProfileApp class
+    getRank(level) {
+        return RANK_CONFIG.find(rank => 
+            level >= rank.minLevel && 
+            (rank.maxLevel === null || level <= rank.maxLevel)
+        ) || RANK_CONFIG[RANK_CONFIG.length - 1];
+    }
+
+    getNextRank(currentRank) {
+        const currentIndex = RANK_CONFIG.findIndex(rank => rank.name === currentRank.name);
+        return currentIndex < RANK_CONFIG.length - 1 ? RANK_CONFIG[currentIndex + 1] : null;
+    }
 
     updateXPStats(transactions) {
         if (!transactions || !Array.isArray(transactions)) return;
 
-        // Calculate total XP excluding duplicates
+        // Calculate total XP
         const uniqueTransactions = new Map();
-
         transactions.forEach(t => {
-            const key = `${t.path}-${t.amount}`;
-            if (!uniqueTransactions.has(key)) {
+            const key = `${t.path}-${t.objectId}`;
+            if (!uniqueTransactions.has(key) || t.amount > uniqueTransactions.get(key).amount) {
                 uniqueTransactions.set(key, t);
             }
         });
@@ -244,21 +263,38 @@ class ProfileApp {
         const totalXP = Array.from(uniqueTransactions.values())
             .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-        // Format XP display
-        const xpElement = document.getElementById('totalXP');
-        if (xpElement) {
-            if (totalXP >= 1000000) {
-                xpElement.textContent = (totalXP / 1000000).toFixed(2) + 'M';
-            } else if (totalXP >= 1000) {
-                xpElement.textContent = (totalXP / 1000).toFixed(1) + 'K';
-            } else {
-                xpElement.textContent = totalXP.toString();
-            }
+        // Calculate level and ranks
+        const level = this.calculateLevel(totalXP);
+        const currentRank = this.getRank(level);
+        const nextRank = this.getNextRank(currentRank);
+
+        // Update UI
+        document.getElementById('totalXP').textContent = this.formatXPValue(totalXP);
+        document.getElementById('current-level').textContent = level;
+        document.getElementById('current-rank').textContent = currentRank.name;
+        document.getElementById('level').textContent = level;
+
+        // Update progress bar and next rank info
+        if (nextRank) {
+            document.getElementById('next-rank-name').textContent = nextRank.name;
+            const progress = ((level - currentRank.minLevel) / 
+                (nextRank.minLevel - currentRank.minLevel)) * 100;
+            document.getElementById('xp-progress-bar').style.width = `${Math.min(100, progress)}%`;
+        } else {
+            document.getElementById('next-rank-name').textContent = 'Maximum Rank Achieved';
+            document.getElementById('xp-progress-bar').style.width = '100%';
         }
 
-        // Store XP data for charts
-        this.xpData = Array.from(uniqueTransactions.values())
-            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        // Update profile title
+        document.getElementById('profile-title').textContent = currentRank.name;
+    }
+
+    formatXPValue(value) {
+        if (value >= 1000000) {
+            return (value / 1000000).toFixed(1) + 'M';
+        } else if (value >= 1000) {
+            return (value / 1000).toFixed(1) + 'K';
+        }
     }
 
     updateAuditStats(auditTransactions) {
