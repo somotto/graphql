@@ -127,12 +127,13 @@ export const createApp = () => {
                 updateUserInfo(userProfile.user[0]);
             }
 
-            // Load data in parallel with error handling
+            // Load all data in parallel with error handling
             const results = await Promise.allSettled([
                 graphqlClient.getXPTransactions(),
-                graphqlClient.getProjectResults(),
                 graphqlClient.getAuditData(),
-                graphqlClient.getSkills()
+                graphqlClient.getSkills(),
+                graphqlClient.getCompletedProjects(),  // Completed projects (grade > 0)
+                graphqlClient.getPendingProjects()     // Pending projects (grade is null)
             ]);
 
             // Process results with error handling
@@ -142,7 +143,7 @@ export const createApp = () => {
                 }
             });
 
-            // Handle each result individually with try-catch
+            // Handle XP data
             try {
                 if (results[0].status === 'fulfilled' && results[0].value?.transaction) {
                     state.xpData = results[0].value.transaction;
@@ -153,9 +154,10 @@ export const createApp = () => {
                 console.error('Error updating XP stats:', error);
             }
 
+            // Handle audit data
             try {
-                if (results[2].status === 'fulfilled' && results[2].value?.transaction) {
-                    updateAuditStats(results[2].value.transaction);
+                if (results[1].status === 'fulfilled' && results[1].value?.transaction) {
+                    updateAuditStats(results[1].value.transaction);
                 }
             } catch (error) {
                 console.error('Error updating audit stats:', error);
@@ -163,13 +165,34 @@ export const createApp = () => {
                     '<p class="error-message">Failed to load audit data</p>';
             }
 
-            // Load project results
-            const projectData = await graphqlClient.getProjectResults();
-            if (projectData?.progress) {
-                const pendingProjects = projectData.progress.filter(p => 
-                    p.object?.type === 'project' && !p.grade
-                );
-                updatePendingProjects(pendingProjects);
+            // Handle completed projects (new addition)
+            try {
+                if (results[3].status === 'fulfilled' && results[3].value?.progress) {
+                    const completedProjectsCount = results[3].value.progress.length;
+                    document.getElementById('completed-projects').textContent = completedProjectsCount;
+
+                    // Update total projects count (completed + pending)
+                    if (results[4].status === 'fulfilled' && results[4].value?.progress) {
+                        const pendingProjectsCount = results[4].value.progress.length;
+                        document.getElementById('projectsCount').textContent =
+                            completedProjectsCount + pendingProjectsCount;
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating project stats:', error);
+                document.getElementById('projectsCount').textContent = '0';
+                document.getElementById('completed-projects').textContent = '0';
+            }
+
+            // Handle pending projects (original functionality)
+            try {
+                if (results[4].status === 'fulfilled' && results[4].value?.progress) {
+                    updatePendingProjects(results[4].value.progress);
+                }
+            } catch (error) {
+                console.error('Error updating pending projects:', error);
+                document.getElementById('pending-projects').innerHTML =
+                    '<p class="error-message">Failed to load pending projects</p>';
             }
 
             // Show content and hide loading indicator
