@@ -1,7 +1,7 @@
-class ChartGenerator {
-    static createXPChart(transactions, containerId) {
+export const createChart = () => {
+    const createXPChart = (transactions, containerId) => {
         const container = document.getElementById(containerId);
-        if (!container || !transactions.length) return;
+        if (!container) return;
 
         let cumulativeXP = 0;
         const dataPoints = transactions.map(t => {
@@ -110,9 +110,9 @@ class ChartGenerator {
         svg.appendChild(xLabelsGroup);
 
         container.appendChild(svg);
-    }
+    };
 
-    static createAuditDoughnutChart(done, received, containerId) {
+    const createAuditChart = (done, received, containerId) => {
         const container = document.getElementById(containerId);
         if (!container) return;
     
@@ -230,5 +230,10 @@ class ChartGenerator {
         svg.appendChild(receivedLegend);
     
         container.appendChild(svg);
-    }
-}
+    };
+
+    return {
+        createXPChart,
+        createAuditChart
+    };
+};
