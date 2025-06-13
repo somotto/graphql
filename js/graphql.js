@@ -95,9 +95,29 @@ export const createGraphQLClient = (authManager) => {
         return query(queryStr);
     };
 
-    const getProjectResults = async () => {
+    const getCompletedProjects = async () => {
         const queryStr = `
-            query GetProjectResults {
+            query GetCompletedProjects {
+                progress(
+                    where: { 
+                        grade: { _gt: 0 },
+                        object: { type: { _eq: "project" } }
+                    }
+                ) {
+                    id
+                    grade
+                    object {
+                        name
+                    }
+                }
+            }
+        `;
+        return query(queryStr);
+    };
+
+    const getPendingProjects = async () => {
+        const queryStr = `
+            query GetPendingProjects {
                 progress(
                     where: { 
                         grade: { _is_null: true },
@@ -156,7 +176,8 @@ export const createGraphQLClient = (authManager) => {
         getUserProfile,
         getXPTransactions,
         getAuditData,
-        getProjectResults,
+        getCompletedProjects,
+        getPendingProjects,
         testQuery,
         getSkills
     };
