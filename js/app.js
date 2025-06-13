@@ -159,8 +159,17 @@ export const createApp = () => {
                 }
             } catch (error) {
                 console.error('Error updating audit stats:', error);
-                document.getElementById('audit-chart-container').innerHTML = 
+                document.getElementById('audit-chart-container').innerHTML =
                     '<p class="error-message">Failed to load audit data</p>';
+            }
+
+            // Load project results
+            const projectData = await graphqlClient.getProjectResults();
+            if (projectData?.progress) {
+                const pendingProjects = projectData.progress.filter(p => 
+                    p.object?.type === 'project' && !p.grade
+                );
+                updatePendingProjects(pendingProjects);
             }
 
             // Show content and hide loading indicator
@@ -169,7 +178,7 @@ export const createApp = () => {
 
         } catch (error) {
             console.error('Error loading dashboard data:', error);
-            document.getElementById('loading-indicator').textContent = 
+            document.getElementById('loading-indicator').textContent =
                 'Error loading data. Please try again.';
         }
     };
@@ -261,25 +270,25 @@ export const createApp = () => {
 
     const updateAuditStats = (auditTransactions) => {
         if (!auditTransactions || !Array.isArray(auditTransactions)) return;
-    
+
         console.log('Updating audit stats with', auditTransactions.length, 'audit transactions');
-    
+
         const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + (t.amount || 0), 0);
         const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + (t.amount || 0), 0);
-    
+
         const totalVotes = upVotes + downVotes;
         const auditRatio = totalVotes > 0 ? Math.round((upVotes / totalVotes) * 100) : 0;
-    
+
         const ratioElement = document.getElementById('auditRatio');
         if (ratioElement) {
             ratioElement.textContent = auditRatio + '%';
         }
-    
+
         // Change this line from createAuditDoughnutChart to createAuditChart
         if (upVotes > 0 || downVotes > 0) {
             charts.createAuditChart(upVotes, downVotes, 'audit-chart-container');
         } else {
-            document.getElementById('audit-chart-container').innerHTML = 
+            document.getElementById('audit-chart-container').innerHTML =
                 '<p class="text-muted">No audit data available</p>';
         }
     };
@@ -313,13 +322,21 @@ export const createApp = () => {
     };
 
     const updatePendingProjects = (projects) => {
-        const container = document.getElementById('pending-projects');
-        if (!projects || !projects.length) {
-            container.innerHTML = '<p class="text-muted">No pending projects</p>';
+        if (!Array.isArray(projects)) return;
+
+        const pendingProjectsContainer = document.getElementById('pending-projects');
+        if (!pendingProjectsContainer) return;
+
+        if (projects.length === 0) {
+            pendingProjectsContainer.innerHTML = `
+                <div class="project-card">
+                    <p class="text-muted">No pending projects found</p>
+                </div>
+            `;
             return;
         }
 
-        container.innerHTML = projects
+        pendingProjectsContainer.innerHTML = projects
             .map(project => {
                 const startDate = new Date(project.createdAt).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -329,8 +346,8 @@ export const createApp = () => {
 
                 return `
                     <div class="project-card">
-                        <h4 class="project-name">${project.object.name}</h4>
-                        <p class="project-path">${project.path}</p>
+                        <h4 class="project-name">${project.object?.name || 'Unnamed Project'}</h4>
+                        <p class="project-path">${project.path || 'No path specified'}</p>
                         <p class="project-date">Started: ${startDate}</p>
                     </div>
                 `;
