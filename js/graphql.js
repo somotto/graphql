@@ -1,25 +1,18 @@
-class GraphQLClient {
-    constructor(authManager) {
-        this.authManager = authManager;
-        this.endpoint = 'https://learn.zone01kisumu.ke/api/graphql-engine/v1/graphql';
-    }
+const ENDPOINT = 'https://learn.zone01kisumu.ke/api/graphql-engine/v1/graphql';
 
-    async query(query, variables = {}) {
+export const createGraphQLClient = (authManager) => {
+    const query = async (query, variables = {}) => {
         try {
-            // Check if we have a token
-            const token = this.authManager.getToken();
+            const token = authManager.getToken();
             if (!token) {
                 throw new Error('No authentication token available');
             }
 
-            // Check if token is expired
-            if (this.authManager.isTokenExpired && this.authManager.isTokenExpired()) {
+            if (authManager.isTokenExpired()) {
                 throw new Error('Authentication token has expired');
             }
 
-            console.log('Making GraphQL query:', { query: query.substring(0, 100) + '...', variables });
-
-            const response = await fetch(this.endpoint, {
+            const response = await fetch(ENDPOINT, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -31,19 +24,13 @@ class GraphQLClient {
                 })
             });
 
-            console.log('GraphQL response status:', response.status);
-
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('GraphQL HTTP error:', errorText);
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log('GraphQL response data:', data);
 
-            if (data.errors && data.errors.length > 0) {
-                console.error('GraphQL errors:', data.errors);
+            if (data.errors?.length > 0) {
                 throw new Error(data.errors[0].message);
             }
 
@@ -52,10 +39,10 @@ class GraphQLClient {
             console.error('GraphQL query error:', error);
             throw error;
         }
-    }
+    };
 
-    async getUserProfile() {
-        const query = `
+    const getUserProfile = async () => {
+        const queryStr = `
             query GetUserProfile {
                 user {
                     id
@@ -69,25 +56,11 @@ class GraphQLClient {
                 }
             }
         `;
-        return this.query(query);
-    }
+        return query(queryStr);
+    };
 
-    // Add new query for skills
-    async getSkills() {
-        const query = `
-        query GetSkills {
-            skill {
-                id
-                name
-                level
-            }
-        }
-    `;
-        return this.query(query);
-    }
-
-    async getXPTransactions() {
-        const query = `
+    const getXPTransactions = async () => {
+        const queryStr = `
             query GetXPTransactions {
                 transaction(
                     where: { type: { _eq: "xp" } }
@@ -101,88 +74,11 @@ class GraphQLClient {
                 }
             }
         `;
-        return this.query(query);
-    }
+        return query(queryStr);
+    };
 
-    async getProjectResults() {
-        const query = `
-            query GetProjectResults {
-                progress(
-                    where: { 
-                        isDone: { _eq: false },
-                        object: { type: { _eq: "project" } }
-                    }
-                    order_by: { createdAt: desc }
-                ) {
-                    id
-                    object {
-                        name
-                    }
-                    path
-                    createdAt
-                }
-            }
-        `;
-        return this.query(query);
-    }
-
-    async getRankInfo() {
-        const query = `
-            query GetRankInfo {
-                user {
-                    id
-                    login
-                    attrs
-                }
-            }
-        `;
-        return this.query(query);
-    }
-
-    // Add this query method to GraphQLClient class
-
-    async getAllXP() {
-        const query = `
-        query GetAllXP {
-            transaction(
-                where: { 
-                    type: { _eq: "xp" },
-                    eventId: { _is_null: true }
-                }
-            ) {
-                amount
-                createdAt
-                path
-            }
-        }
-    `;
-        return this.query(query);
-    }
-
-    // Alternative method to get progress data
-    async getProgressData() {
-        const query = `
-            query GetProgressData {
-                progress {
-                    id
-                    grade
-                    createdAt
-                    updatedAt
-                    path
-                    objectId
-                    object {
-                        name
-                        type
-                    }
-                }
-            }
-        `;
-        return this.query(query);
-    }
-
-    // Get audit data
-    async getAuditData() {
-        const query = `
+    const getAuditData = async () => {
+        const queryStr = `
             query GetAuditData {
                 transaction(
                     where: { type: { _in: ["up", "down"] } }
@@ -196,38 +92,89 @@ class GraphQLClient {
                 }
             }
         `;
-        return this.query(query);
-    }
+        return query(queryStr);
+    };
 
-    // Test query to check if authentication is working
-    async testQuery() {
-        const query = `
-            query TestQuery {
-                user {
+    const getProjectResults = async () => {
+        const queryStr = `
+            query GetProjectResults {
+                result(
+                    where: { 
+                        type: { _eq: "project" },
+                        grade: { _is_null: false }
+                    }
+                    order_by: { createdAt: desc }
+                ) {
                     id
-                    login
-                }
-            }
-        `;
-        return this.query(query);
-    }
-
-    // Introspection query to see available fields
-    async introspectUserType() {
-        const query = `
-            query IntrospectUser {
-                __type(name: "user") {
-                    name
-                    fields {
+                    objectId
+                    grade
+                    createdAt
+                    updatedAt
+                    path
+                    object {
+                        id
                         name
-                        type {
-                            name
-                            kind
-                        }
+                    }
+                }
+                progress(
+                    where: { 
+                        grade: { _is_null: false }
+                    }
+                    order_by: { updatedAt: desc }
+                ) {
+                    id
+                    objectId
+                    grade
+                    createdAt
+                    updatedAt
+                    path
+                    object {
+                        id
+                        name
                     }
                 }
             }
         `;
-        return this.query(query);
-    }
-}
+        return query(queryStr);
+    };
+
+    const testQuery = async () => {
+        const queryStr = `
+            query TestConnection {
+                user {
+                    id
+                }
+            }
+        `;
+        return query(queryStr);
+    };
+
+    const getSkills = async () => {
+        const queryStr = `
+            query GetSkills {
+                transaction(
+                    where: { 
+                        type: { _eq: "skill" }
+                    }
+                    order_by: { amount: desc }
+                ) {
+                    id
+                    type
+                    amount
+                    path
+                }
+            }
+        `;
+        return query(queryStr);
+    };
+
+    return {
+        query,
+        getUserProfile,
+        getXPTransactions,
+        getAuditData,
+        getProjectResults,
+        testQuery,
+        getSkills
+    };
+};
