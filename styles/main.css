@@ -141,6 +141,13 @@ body {
     animation: spin 1s ease-in-out infinite;
 }
 
+.loading-message {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-light);
+    font-size: 1.1rem;
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
