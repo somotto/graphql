@@ -208,12 +208,25 @@ export const createApp = () => {
 
     const updateUserInfo = (user) => {
         console.log('Updating user info:', user);
+
+        let attrs = {};
+        try {
+            attrs = typeof user.attrs === 'string' ? JSON.parse(user.attrs) : user.attrs || {};
+        } catch (e) {
+            console.error('Error parsing user attrs:', e);
+            attrs = {};
+        }
+
         document.getElementById('userName').textContent = `Welcome back, ${user.login}!`;
         document.getElementById('profile-initial').textContent = user.login.charAt(0).toUpperCase();
         document.getElementById('profile-name').textContent = user.login;
         document.getElementById('profile-email').textContent = user.email || 'Not provided';
-        document.getElementById('profile-phone').textContent = 'Not available';
-        document.getElementById('profile-country').textContent = 'Not available';
+
+        document.getElementById('profile-phone').textContent =
+            attrs.phone || attrs.phoneNumber || attrs.mobile || 'Not available';
+
+        document.getElementById('profile-country').textContent =
+            attrs.country || attrs.nationality || attrs.location?.country || 'Not available';
     };
 
     const calculateLevel = (totalXP) => {
