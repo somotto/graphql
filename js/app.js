@@ -167,19 +167,11 @@ export const createApp = () => {
 
             // Handle completed projects (new addition)
             try {
-                if (results[3].status === 'fulfilled' && results[3].value?.progress) {
-                    const completedProjectsCount = results[3].value.progress.length;
-                    document.getElementById('completed-projects').textContent = completedProjectsCount;
-
-                    // Update total projects count (completed + pending)
-                    if (results[4].status === 'fulfilled' && results[4].value?.progress) {
-                        const pendingProjectsCount = results[4].value.progress.length;
-                        document.getElementById('projectsCount').textContent =
-                            completedProjectsCount + pendingProjectsCount;
-                    }
+                if (results[3].status === 'fulfilled' && results[3].value) {
+                    updateProjectStats(results[3].value);
                 }
             } catch (error) {
-                console.error('Error updating project stats:', error);
+                console.error('Error handling project data:', error);
                 document.getElementById('projectsCount').textContent = '0';
                 document.getElementById('completed-projects').textContent = '0';
             }
@@ -300,13 +292,32 @@ export const createApp = () => {
         return round(value);
     };
 
-    const updateProjectStats = (results) => {
-        console.log('Updating project stats with', results.length, 'results');
-        const totalProjects = results.length;
-        const passedProjects = results.filter(r => r.grade && r.grade > 0).length;
+    const updateProjectStats = async (results) => {
+        try {
+            if (!results || !results.progress) {
+                console.error('No project data available');
+                return;
+            }
 
-        document.getElementById('projectsCount').textContent = totalProjects;
-        document.getElementById('completed-projects').textContent = passedProjects;
+            // Filter completed projects with grade > 0 and valid path
+            const completedProjects = results.progress.filter(p =>
+                p.grade > 0 &&
+                p.path &&
+                p.object?.type === 'project'
+            );
+
+            const totalCompleted = completedProjects.length;
+            console.log('Total completed projects:', totalCompleted);
+
+            // Update UI elements
+            document.getElementById('projectsCount').textContent = totalCompleted;
+            document.getElementById('completed-projects').textContent = totalCompleted;
+
+        } catch (error) {
+            console.error('Error updating project stats:', error);
+            document.getElementById('projectsCount').textContent = '0';
+            document.getElementById('completed-projects').textContent = '0';
+        }
     };
 
     const updateAuditStats = (auditTransactions) => {
