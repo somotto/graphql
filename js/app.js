@@ -145,8 +145,8 @@ export const createApp = () => {
 
             // Handle XP data
             try {
-                if (results[0].status === 'fulfilled' && results[0].value?.transaction) {
-                    state.xpData = results[0].value.transaction;
+                if (results[0].status === 'fulfilled' && results[0].value?.xpCount) {
+                    state.xpData = results[0].value.xpCount;
                     updateXPStats(state.xpData);
                     updateXPChartTimeRange(6);
                 }
@@ -286,13 +286,18 @@ export const createApp = () => {
         document.getElementById('profile-title').textContent = currentRank.name;
     };
 
+    // Update formatXPValue function
     const formatXPValue = (value) => {
+        const round = (num) => {
+            return Number(Math.round(num + 'e2') + 'e-2');
+        };
+
         if (value >= 1000000) {
-            return (value / 1000000).toFixed(1) + 'M';
+            return round(value / 1000000) + 'M';
         } else if (value >= 1000) {
-            return (value / 1000).toFixed(1) + 'K';
+            return round(value / 1000) + 'K';
         }
-        return value.toString();
+        return round(value);
     };
 
     const updateProjectStats = (results) => {
