@@ -100,17 +100,27 @@ export const createGraphQLClient = (authManager) => {
 
     const getCompletedProjects = async () => {
         const queryStr = `
-            query GetCompletedProjects {
+            query {
                 progress(
-                    where: { 
-                        grade: { _gt: 0 },
-                        object: { type: { _eq: "project" } }
+                    where: {
+                        _and: [
+                            { grade: { _gt: 0 } },
+                            { object: { type: { _eq: "project" } } },
+                            { eventId: { _eq: 75 } }
+                        ]
                     }
+                    order_by: { updatedAt: desc }
                 ) {
                     id
+                    objectId
                     grade
+                    createdAt
+                    updatedAt
+                    path
                     object {
+                        id
                         name
+                        type
                     }
                 }
             }
