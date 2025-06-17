@@ -61,19 +61,22 @@ export const createGraphQLClient = (authManager) => {
 
     const getXPTransactions = async () => {
         const queryStr = `
-            query GetXPTransactions {
-                transaction(
-                    where: { type: { _eq: "xp" } }
-                    order_by: { createdAt: asc }
-                ) {
-                    id
-                    amount
-                    createdAt
-                    path
-                    objectId
+        query GetXPTransactions {
+            xpCount: transaction(
+                where: {
+                    type: {_eq: "xp"}, 
+                    eventId: {_eq: 75}
                 }
+                order_by: {createdAt: asc}
+            ) {
+                type
+                amount
+                createdAt
+                path
+                objectId
             }
-        `;
+        }
+    `;
         return query(queryStr);
     };
 
