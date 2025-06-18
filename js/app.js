@@ -323,20 +323,24 @@ export const createApp = () => {
     const updateAuditStats = (auditTransactions) => {
         if (!auditTransactions || !Array.isArray(auditTransactions)) return;
 
-        console.log('Updating audit stats with', auditTransactions.length, 'audit transactions');
+        const upVotes = auditTransactions
+            .filter(t => t.type === 'up')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-        const upVotes = auditTransactions.filter(t => t.type === 'up').reduce((sum, t) => sum + (t.amount || 0), 0);
-        const downVotes = auditTransactions.filter(t => t.type === 'down').reduce((sum, t) => sum + (t.amount || 0), 0);
+        const downVotes = auditTransactions
+            .filter(t => t.type === 'down')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
 
         const totalVotes = upVotes + downVotes;
         const auditRatio = totalVotes > 0 ? Math.round((upVotes / totalVotes) * 100) : 0;
 
+        // Update ratio display
         const ratioElement = document.getElementById('auditRatio');
         if (ratioElement) {
             ratioElement.textContent = auditRatio + '%';
         }
 
-        // Change this line from createAuditDoughnutChart to createAuditChart
+        // Create or update chart
         if (upVotes > 0 || downVotes > 0) {
             charts.createAuditChart(upVotes, downVotes, 'audit-chart-container');
         } else {
