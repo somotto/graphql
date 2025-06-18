@@ -115,121 +115,172 @@ export const createChart = () => {
     const createAuditChart = (done, received, containerId) => {
         const container = document.getElementById(containerId);
         if (!container) return;
-    
+
         container.innerHTML = '';
-    
+
         const width = container.clientWidth || 400;
         const height = 300;
         const centerX = width / 2;
         const centerY = height / 2;
-        const radius = Math.min(width, height) / 4;
-        const innerRadius = radius * 0.6; // Creates the donut hole
+        const radius = Math.min(width, height) / 3;
+        const innerRadius = radius * 0.7;
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        // Create defs for gradients
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         
+        // Add gradient definitions for done and received
+        const doneGradient = createGradient("doneGradient", "#00f5ff", "#00c8ff");
+        const receivedGradient = createGradient("receivedGradient", "#8a2be2", "#9932cc");
+        
+        defs.appendChild(doneGradient);
+        defs.appendChild(receivedGradient);
+        svg.appendChild(defs);
+
+        // Create chart group
+        const chartGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        chartGroup.setAttribute("transform", `translate(${centerX}, ${centerY})`);
+
+        // Calculate ratios
         const total = done + received;
         if (total === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #a0aec0;">No audit data available</p>';
+            container.innerHTML = '<p class="text-muted">No audit data available</p>';
             return;
         }
-    
-        const doneAngle = (done / total) * Math.PI * 2;
-        
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        svg.setAttribute('width', '100%');
-    
-        // Create donut slices
-        const createArc = (startAngle, endAngle, color) => {
-            const x1 = centerX + radius * Math.cos(startAngle - Math.PI / 2);
-            const y1 = centerY + radius * Math.sin(startAngle - Math.PI / 2);
-            const x2 = centerX + radius * Math.cos(endAngle - Math.PI / 2);
-            const y2 = centerY + radius * Math.sin(endAngle - Math.PI / 2);
-            
-            const xi1 = centerX + innerRadius * Math.cos(startAngle - Math.PI / 2);
-            const yi1 = centerY + innerRadius * Math.sin(startAngle - Math.PI / 2);
-            const xi2 = centerX + innerRadius * Math.cos(endAngle - Math.PI / 2);
-            const yi2 = centerY + innerRadius * Math.sin(endAngle - Math.PI / 2);
-    
-            const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
-    
-            const d = [
-                `M ${x1} ${y1}`,
-                `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
-                `L ${xi2} ${yi2}`,
-                `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${xi1} ${yi1}`,
-                'Z'
-            ].join(' ');
-    
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', d);
-            path.setAttribute('fill', color);
-            path.setAttribute('stroke', 'rgba(255, 255, 255, 0.1)');
-            path.setAttribute('stroke-width', '1');
-            return path;
-        };
-    
-        // Add done slice (left)
-        const doneSlice = createArc(0, doneAngle, '#00cc66');
-        svg.appendChild(doneSlice);
-    
-        // Add received slice (right)
-        const receivedSlice = createArc(doneAngle, Math.PI * 2, '#0066cc');
-        svg.appendChild(receivedSlice);
-    
-        // Add center values
-        const centerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        centerText.setAttribute('x', centerX);
-        centerText.setAttribute('y', centerY);
-        centerText.setAttribute('text-anchor', 'middle');
-        centerText.setAttribute('dominant-baseline', 'middle');
-        centerText.setAttribute('fill', 'white');
-        centerText.setAttribute('font-size', '24');
-        centerText.textContent = `${Math.round((done / total) * 100)}%`;
-        svg.appendChild(centerText);
-    
+
+        const doneRatio = done / total;
+        const doneAngle = doneRatio * Math.PI * 2;
+        const receivedAngle = Math.PI * 2 - doneAngle;
+
+        // Create slices
+        if (doneRatio > 0) {
+            const doneSlice = createDonutSlice(0, doneAngle, radius, innerRadius, "url(#doneGradient)");
+            chartGroup.appendChild(doneSlice);
+        }
+
+        if (1 - doneRatio > 0) {
+            const receivedSlice = createDonutSlice(doneAngle, Math.PI * 2, radius, innerRadius, "url(#receivedGradient)");
+            chartGroup.appendChild(receivedSlice);
+        }
+
+        // Add center text
+        const ratio = (done / received).toFixed(1);
+        addCenterText(chartGroup, ratio);
+
         // Add legend
-        const legendY = height - 40;
-    
-        // Done legend
-        const doneLegend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        doneLegend.setAttribute('transform', `translate(${centerX - 100}, ${legendY})`);
-        
-        const doneRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        doneRect.setAttribute('width', 12);
-        doneRect.setAttribute('height', 12);
-        doneRect.setAttribute('fill', '#00cc66');
-        doneLegend.appendChild(doneRect);
-        
-        const doneText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        doneText.setAttribute('x', 20);
-        doneText.setAttribute('y', 10);
-        doneText.setAttribute('fill', 'white');
-        doneText.setAttribute('font-size', '12');
-        doneText.textContent = `Done: ${done}`;
-        doneLegend.appendChild(doneText);
-        
-        svg.appendChild(doneLegend);
-    
-        // Received legend
-        const receivedLegend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        receivedLegend.setAttribute('transform', `translate(${centerX + 20}, ${legendY})`);
-        
-        const receivedRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        receivedRect.setAttribute('width', 12);
-        receivedRect.setAttribute('height', 12);
-        receivedRect.setAttribute('fill', '#0066cc');
-        receivedLegend.appendChild(receivedRect);
-        
-        const receivedText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        receivedText.setAttribute('x', 20);
-        receivedText.setAttribute('y', 10);
-        receivedText.setAttribute('fill', 'white');
-        receivedText.setAttribute('font-size', '12');
-        receivedText.textContent = `Received: ${received}`;
-        receivedLegend.appendChild(receivedText);
-        
-        svg.appendChild(receivedLegend);
-    
+        addLegend(chartGroup, done, received, radius);
+
+        svg.appendChild(chartGroup);
         container.appendChild(svg);
+    };
+
+    const createGradient = (id, color1, color2) => {
+        const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+        gradient.setAttribute("id", id);
+        gradient.setAttribute("x1", "0%");
+        gradient.setAttribute("y1", "0%");
+        gradient.setAttribute("x2", "100%");
+        gradient.setAttribute("y2", "100%");
+
+        const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop1.setAttribute("offset", "0%");
+        stop1.setAttribute("stop-color", color1);
+
+        const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop2.setAttribute("offset", "100%");
+        stop2.setAttribute("stop-color", color2);
+
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        return gradient;
+    };
+
+    const createDonutSlice = (startAngle, endAngle, outerRadius, innerRadius, fillColor) => {
+        const startOuterX = Math.cos(startAngle - Math.PI / 2) * outerRadius;
+        const startOuterY = Math.sin(startAngle - Math.PI / 2) * outerRadius;
+        const endOuterX = Math.cos(endAngle - Math.PI / 2) * outerRadius;
+        const endOuterY = Math.sin(endAngle - Math.PI / 2) * outerRadius;
+        const startInnerX = Math.cos(startAngle - Math.PI / 2) * innerRadius;
+        const startInnerY = Math.sin(startAngle - Math.PI / 2) * innerRadius;
+        const endInnerX = Math.cos(endAngle - Math.PI / 2) * innerRadius;
+        const endInnerY = Math.sin(endAngle - Math.PI / 2) * innerRadius;
+
+        const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+        
+        const slice = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const d = [
+            `M ${startOuterX} ${startOuterY}`,
+            `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endOuterX} ${endOuterY}`,
+            `L ${endInnerX} ${endInnerY}`,
+            `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${startInnerX} ${startInnerY}`,
+            'Z'
+        ].join(' ');
+
+        slice.setAttribute("d", d);
+        slice.setAttribute("fill", fillColor);
+        return slice;
+    };
+
+    const addCenterText = (group, ratio) => {
+        const centerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        centerText.setAttribute("x", "0");
+        centerText.setAttribute("y", "-10");
+        centerText.setAttribute("text-anchor", "middle");
+        centerText.setAttribute("fill", "#00f5ff");
+        centerText.setAttribute("font-size", "24px");
+        centerText.textContent = ratio;
+
+        const subText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        subText.setAttribute("x", "0");
+        subText.setAttribute("y", "20");
+        subText.setAttribute("text-anchor", "middle");
+        subText.setAttribute("fill", "#a0aec0");
+        subText.setAttribute("font-size", "14px");
+        subText.textContent = "Done/Received";
+
+        group.appendChild(centerText);
+        group.appendChild(subText);
+    };
+
+    const addLegend = (group, done, received, radius) => {
+        const legendGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        legendGroup.setAttribute("transform", `translate(0, ${radius + 40})`);
+
+        // Done legend
+        const doneLegend = createLegendItem(-100, "Done", done, "#00f5ff");
+        // Received legend
+        const receivedLegend = createLegendItem(20, "Received", received, "#8a2be2");
+
+        legendGroup.appendChild(doneLegend);
+        legendGroup.appendChild(receivedLegend);
+        group.appendChild(legendGroup);
+    };
+
+    const createLegendItem = (x, label, value, color) => {
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("transform", `translate(${x}, 0)`);
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("width", "12");
+        rect.setAttribute("height", "12");
+        rect.setAttribute("fill", color);
+        rect.setAttribute("rx", "2");
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", "20");
+        text.setAttribute("y", "10");
+        text.setAttribute("fill", "#e0e0e0");
+        text.setAttribute("font-size", "12px");
+        text.textContent = `${label} (${value})`;
+
+        group.appendChild(rect);
+        group.appendChild(text);
+        return group;
     };
 
     return {
