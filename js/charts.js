@@ -3,60 +3,267 @@ export function createXPChart(transactions) {
     const container = document.getElementById('xp-chart');
     container.innerHTML = '';
 
-    // Process data for chart
-    const data = transactions
-        .filter(txn => txn.type === 'xp')
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-        .map((txn, i, arr) => ({
-            date: new Date(txn.createdAt),
-            xp: arr.slice(0, i + 1).reduce((sum, t) => sum + t.amount, 0)
+    // Add time period selector
+    const timeSelector = document.createElement('div');
+    timeSelector.className = 'time-selector';
+    timeSelector.innerHTML = `
+        <button data-period="1" class="time-button active">1 Month</button>
+        <button data-period="3" class="time-button">3 Months</button>
+        <button data-period="6" class="time-button">6 Months</button>
+        <button data-period="all" class="time-button">All Time</button>
+    `;
+    container.appendChild(timeSelector);
+
+    // Process and filter data based on time period
+    function filterDataByPeriod(months) {
+        const now = new Date();
+        const cutoff = new Date(now.setMonth(now.getMonth() - months));
+
+        return transactions
+            .filter(txn => months === 'all' || new Date(txn.createdAt) > cutoff)
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+            .reduce((acc, txn) => {
+                const date = new Date(txn.createdAt);
+                const lastEntry = acc[acc.length - 1] || { xp: 0 };
+                const cumulativeXP = lastEntry.xp + txn.amount;
+
+                acc.push({
+                    date,
+                    xp: cumulativeXP,
+                    amount: txn.amount,
+                    path: txn.path
+                });
+                return acc;
+            }, []);
+    }
+
+    // Calculate average XP progression
+    function calculateAverageXP(data) {
+        const totalStudents = 10; // Example value, replace with actual count
+        return data.map(d => ({
+            ...d,
+            averageXP: d.xp / totalStudents
         }));
+    }
 
-    // Create SVG
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute('viewBox', `0 0 800 400`);
-    svg.style.width = '100%';
-    svg.style.height = '100%';
+    function updateChart(period) {
+        const filteredData = filterDataByPeriod(period);
+        const dataWithAverage = calculateAverageXP(filteredData);
 
-    // Add X axis
-    const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    xAxis.setAttribute('d', 'M50,350 L750,350');
-    xAxis.setAttribute('stroke', '#cbd5e0');
-    xAxis.setAttribute('stroke-width', '2');
-    svg.appendChild(xAxis);
+        // Create SVG
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute('viewBox', '0 0 800 400');
+        svg.style.width = '100%';
+        svg.style.height = '100%';
 
-    // Add Y axis
-    const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    yAxis.setAttribute('d', 'M50,350 L50,50');
-    yAxis.setAttribute('stroke', '#cbd5e0');
-    yAxis.setAttribute('stroke-width', '2');
-    svg.appendChild(yAxis);
+        // Calculate scales based on maximum of both lines
+        const maxXP = Math.max(...dataWithAverage.map(d => Math.max(d.xp, d.averageXP)));
+        const yScale = 300 / maxXP;
 
-    // Add grid lines
-    for (let i = 0; i <= 10; i++) {
-        const y = 350 - (i * 30);
+        // Add grid and axes
+        svg.appendChild(createGridAndAxes(maxXP));
+
+        // Add area fill for user XP
+        const areaPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const userAreaData = dataWithAverage.map((d, i) => {
+            const x = 50 + (i / (dataWithAverage.length - 1)) * 700;
+            const y = 350 - (d.xp * yScale);
+            return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+        }).join(' ') + 'L750,350 L50,350 Z';
+        
+        areaPath.setAttribute('d', userAreaData);
+        areaPath.setAttribute('fill', 'url(#xp-line-gradient)');
+        areaPath.setAttribute('opacity', '0.3');
+        svg.appendChild(areaPath);
+
+        // Add user XP line
+        const userLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const userPathData = dataWithAverage.map((d, i) => {
+            const x = 50 + (i / (dataWithAverage.length - 1)) * 700;
+            const y = 350 - (d.xp * yScale);
+            return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+        }).join(' ');
+        
+        userLine.setAttribute('d', userPathData);
+        userLine.setAttribute('stroke', '#4fd1c5');
+        userLine.setAttribute('stroke-width', '3');
+        userLine.setAttribute('fill', 'none');
+        svg.appendChild(userLine);
+
+        // Add average XP line
+        const avgLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const avgPathData = dataWithAverage.map((d, i) => {
+            const x = 50 + (i / (dataWithAverage.length - 1)) * 700;
+            const y = 350 - (d.averageXP * yScale);
+            return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+        }).join(' ');
+        
+        avgLine.setAttribute('d', avgPathData);
+        avgLine.setAttribute('stroke', '#805ad5');
+        avgLine.setAttribute('stroke-width', '3');
+        avgLine.setAttribute('fill', 'none');
+        avgLine.setAttribute('stroke-dasharray', '5,5');
+        svg.appendChild(avgLine);
+
+        // Add data points with tooltips
+        dataWithAverage.forEach((d, i) => {
+            const x = 50 + (i / (dataWithAverage.length - 1)) * 700;
+            
+            // User XP point
+            const userPoint = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            const userY = 350 - (d.xp * yScale);
+            userPoint.setAttribute('cx', x);
+            userPoint.setAttribute('cy', userY);
+            userPoint.setAttribute('r', '4');
+            userPoint.setAttribute('fill', '#4fd1c5');
+            userPoint.setAttribute('data-tooltip', 
+                `Your XP: ${d.xp}\nDate: ${d.date.toLocaleDateString()}`
+            );
+            addPointInteraction(userPoint);
+            svg.appendChild(userPoint);
+
+            // Average XP point
+            const avgPoint = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            const avgY = 350 - (d.averageXP * yScale);
+            avgPoint.setAttribute('cx', x);
+            avgPoint.setAttribute('cy', avgY);
+            avgPoint.setAttribute('r', '4');
+            avgPoint.setAttribute('fill', '#805ad5');
+            avgPoint.setAttribute('data-tooltip', 
+                `Average XP: ${Math.round(d.averageXP)}\nDate: ${d.date.toLocaleDateString()}`
+            );
+            addPointInteraction(avgPoint);
+            svg.appendChild(avgPoint);
+        });
+
+        // Add legend
+        const legend = createLegend();
+        svg.appendChild(legend);
+
+        // Update chart container
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'chart-area';
+        chartContainer.appendChild(svg);
+        
+        const oldChart = container.querySelector('.chart-area');
+        if (oldChart) {
+            container.removeChild(oldChart);
+        }
+        container.appendChild(chartContainer);
+    }
+
+    // Event listeners for time period buttons
+    timeSelector.addEventListener('click', (e) => {
+        if (e.target.classList.contains('time-button')) {
+            timeSelector.querySelectorAll('.time-button').forEach(btn =>
+                btn.classList.remove('active'));
+            e.target.classList.add('active');
+            updateChart(e.target.dataset.period === 'all' ? 'all' : parseInt(e.target.dataset.period));
+        }
+    });
+
+    // Initial render with 1 month period
+    updateChart(1);
+}
+
+// Add these helper functions to create chart components
+function createGridAndAxes(maxXP) {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+    // Y-axis labels and grid lines
+    for (let i = 0; i <= 5; i++) {
+        const y = 350 - (i * 60);
+        const xpValue = Math.round((i * maxXP / 5) / 1000);
+
+        // Grid line
         const gridLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
         gridLine.setAttribute('d', `M50,${y} L750,${y}`);
         gridLine.setAttribute('stroke', '#edf2f7');
         gridLine.setAttribute('stroke-width', '1');
-        svg.appendChild(gridLine);
+        group.appendChild(gridLine);
+
+        // Y-axis label
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute('x', '40');
+        label.setAttribute('y', y);
+        label.setAttribute('text-anchor', 'end');
+        label.setAttribute('dominant-baseline', 'middle');
+        label.setAttribute('fill', '#718096');
+        label.setAttribute('font-size', '12');
+        label.textContent = `${xpValue}k`;
+        group.appendChild(label);
     }
 
-    // Add data points
+    return group;
+}
+
+function createLine(data, accessor, color) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     const pathData = data.map((d, i) => {
         const x = 50 + (i / (data.length - 1)) * 700;
-        const y = 350 - (d.xp / 1000) * 300; // Scale for visualization
+        const y = 350 - (accessor(d) * (300 / Math.max(...data.map(accessor))));
         return `${i === 0 ? 'M' : 'L'}${x},${y}`;
     }).join(' ');
 
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute('d', pathData);
-    path.setAttribute('stroke', '#4fd1c5');
-    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
     path.setAttribute('stroke-width', '3');
-    svg.appendChild(path);
+    path.setAttribute('fill', 'none');
 
-    container.appendChild(svg);
+    return path;
+}
+
+function createLegend() {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.innerHTML = `
+        <rect x="600" y="20" width="15" height="15" fill="#4fd1c5"/>
+        <text x="625" y="33" fill="#2d3748">Your XP</text>
+        <rect x="600" y="45" width="15" height="15" fill="#805ad5"/>
+        <text x="625" y="58" fill="#2d3748">Average XP</text>
+    `;
+    return group;
+}
+
+// Tooltip helpers
+function showTooltip(event, text) {
+    let tooltip = document.getElementById('chart-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'chart-tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '8px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.whiteSpace = 'pre-line';
+        document.body.appendChild(tooltip);
+    }
+
+    tooltip.textContent = text;
+    tooltip.style.left = (event.pageX + 10) + 'px';
+    tooltip.style.top = (event.pageY + 10) + 'px';
+    tooltip.style.display = 'block';
+}
+
+function hideTooltip() {
+    const tooltip = document.getElementById('chart-tooltip');
+    if (tooltip) {
+        tooltip.style.display = 'none';
+    }
+}
+
+function addPointInteraction(point) {
+    point.addEventListener('mouseenter', (e) => {
+        point.setAttribute('r', '6');
+        showTooltip(e, point.getAttribute('data-tooltip'));
+    });
+    
+    point.addEventListener('mouseleave', () => {
+        point.setAttribute('r', '4');
+        hideTooltip();
+    });
 }
 
 // Create audit ratio chart
