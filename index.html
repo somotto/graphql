@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Learning Profile | GraphQL Project</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Login Page -->
+    <div id="login-page" class="auth-container">
+        <div class="auth-card">
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="auth-subtitle">Sign in to view your learning profile</p>
+
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="credentials">Email or Username</label>
+                    <input type="text" id="credentials" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+
+                <button type="submit" class="auth-button">Sign In</button>
+            </form>
+
+            <div id="login-error" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Profile Page -->
+    <div id="profile-page" class="profile-container">
+        <!-- Header -->
+        <header class="profile-header">
+            <div class="header-content">
+                <h1 class="profile-title">My Learning Dashboard</h1>
+                <button id="logout-btn" class="logout-button">Sign Out</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="profile-content">
+            <!-- Sidebar -->
+            <aside class="profile-sidebar">
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <span id="profile-initial">U</span>
+                    </div>
+                    <div class="user-info">
+                        <h2 id="profile-name">User</h2>
+                        <p id="profile-email">user@example.com</p>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stat-item">
+                        <span class="stat-label">Level</span>
+                        <span id="level" class="stat-value">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Rank</span>
+                        <span id="current-rank" class="stat-value">Aspiring Developer</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">XP</span>
+                        <span id="total-xp" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Projects</span>
+                        <span id="projects-count" class="stat-value">0</span>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-header">
+                        <span>Progress to Next Rank</span>
+                        <span id="next-rank-name">Beginner Developer</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="xp-progress-bar" class="progress-fill"></div>
+                    </div>
+                    <div class="progress-levels">
+                        <span id="current-level">0</span>
+                        <span>/</span>
+                        <span id="next-level">10</span>
+                    </div>
+                </div>
+
+                <div class="current-project" id="current-project">
+                    <h3>Current Project</h3>
+                    <p>No active project</p>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div class="profile-main">
+                <!-- Audit Ratio Section -->
+                <section class="dashboard-section">
+                    <h2 class="section-title">Audit Ratio</h2>
+                    <div class="audit-container">
+                        <div class="audit-value">
+                            <span id="audit-ratio">0.0</span>
+                        </div>
+                        <div id="audit-chart" class="audit-chart"></div>
+                    </div>
+                </section>
+
+                <!-- XP Progression Section -->
+                <section class="dashboard-section">
+                    <h2 class="section-title">XP Progression</h2>
+                    <div id="xp-chart" class="chart-container"></div>
+                </section>
+
+                <!-- Skills Section -->
+                <section class="dashboard-section">
+                    <h2 class="section-title">Skills Overview</h2>
+                    <div id="skills-chart" class="chart-container"></div>
+                </section>
+
+                <!-- Projects Section -->
+                <section class="dashboard-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Completed Projects</h2>
+                        <span id="completed-projects" class="section-count">0</span>
+                    </div>
+                    <div id="projects-container" class="projects-grid"></div>
+                </section>
+
+                <!-- Pending Projects Section -->
+                <section class="dashboard-section">
+                    <h2 class="section-title">Pending Projects</h2>
+                    <div id="pending-projects" class="pending-list"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Change these lines at the bottom of the file -->
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/data.js"></script>
+    <script type="module" src="js/charts.js"></script>
+    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
