@@ -1,0 +1,158 @@
+import { createXPChart, createAuditChart, createSkillsChart } from './charts.js';
+
+// Update profile UI with user data
+export function updateProfileUI(profileData) {
+    const { userInfo, stats, projects, skills } = profileData;
+
+    // Basic user info
+    document.getElementById('profile-name').textContent = userInfo.login;
+    document.getElementById('profile-email').textContent = userInfo.email || `${userInfo.login}@student.zone01kisumu.ke`;
+
+    // Set avatar initial
+    const initial = userInfo.login?.charAt(0).toUpperCase() || 'U';
+    document.getElementById('profile-initial').textContent = initial;
+
+    // Stats
+    document.getElementById('level').textContent = userInfo.level;
+    document.getElementById('total-xp').textContent = stats.totalXP.toLocaleString();
+    document.getElementById('projects-count').textContent = stats.completedProjects;
+    document.getElementById('completed-projects').textContent = stats.completedProjects;
+    document.getElementById('audit-ratio').textContent = stats.auditRatio.toFixed(2);
+
+    // Update rank
+    updateRankInfo(userInfo.level);
+
+    // Create charts
+    createXPChart(profileData.xpTransactions);
+    createAuditChart(stats.upTotal, stats.downTotal);
+    createSkillsChart(skills);
+
+    // Show projects
+    displayProjects(projects.completed);
+    displayPendingProjects(projects.pending);
+
+    // Set current project
+    updateCurrentProject(projects.pending.length > 0 ? projects.pending[0] :
+        projects.completed.length > 0 ? projects.completed[0] : null);
+}
+
+// Update rank information
+function updateRankInfo(level) {
+    const ranks = [
+        { name: "Aspiring Developer", min: 0, max: 9 },
+        { name: "Beginner Developer", min: 10, max: 19 },
+        { name: "Junior Developer", min: 20, max: 29 },
+        { name: "Intermediate Developer", min: 30, max: 39 },
+        { name: "Advanced Developer", min: 40, max: 49 },
+        { name: "Senior Developer", min: 50, max: null }
+    ];
+
+    const currentRank = ranks.find(r => level >= r.min && (r.max === null || level <= r.max)) || ranks[0];
+    const nextRank = ranks[ranks.indexOf(currentRank) + 1];
+
+    document.getElementById('current-rank').textContent = currentRank.name;
+
+    if (nextRank) {
+        document.getElementById('next-rank-name').textContent = nextRank.name;
+        const progress = ((level - currentRank.min) / (nextRank.min - currentRank.min)) * 100;
+        document.getElementById('xp-progress-bar').style.width = `${progress}%`;
+        document.getElementById('current-level').textContent = level - currentRank.min;
+        document.getElementById('next-level').textContent = nextRank.min - currentRank.min;
+    } else {
+        document.getElementById('next-rank-name').textContent = "Max Rank";
+        document.getElementById('xp-progress-bar').style.width = '100%';
+        document.getElementById('current-level').textContent = level;
+        document.getElementById('next-level').textContent = level;
+    }
+}
+
+// Display completed projects
+function displayProjects(projects) {
+    const container = document.getElementById('projects-container');
+
+    if (!projects || projects.length === 0) {
+        container.innerHTML = '<p>No completed projects yet</p>';
+        return;
+    }
+
+    container.innerHTML = projects.map(project => `
+        <div class="project-card">
+            <h3>${project.object?.name || 'Unknown Project'}</h3>
+            <p>Grade: ${project.grade || 'N/A'}</p>
+            <p>Completed: ${new Date(project.createdAt).toLocaleDateString()}</p>
+        </div>
+    `).join('');
+}
+
+// Display pending projects
+function displayPendingProjects(projects) {
+    const container = document.getElementById('pending-projects');
+
+    if (!projects || projects.length === 0) {
+        container.innerHTML = '<p>No pending projects</p>';
+        return;
+    }
+
+    container.innerHTML = projects.map(project => `
+        <div class="pending-project">
+            <h4>${project.object?.name || 'Unknown Project'}</h4>
+            <span class="time-elapsed">Started ${timeSince(project.createdAt)} ago</span>
+        </div>
+    `).join('');
+}
+
+// Update current project display
+function updateCurrentProject(project) {
+    const container = document.getElementById('current-project');
+
+    if (!project) {
+        container.innerHTML = '<h3>Current Project</h3><p>No active project</p>';
+        return;
+    }
+
+    const isPending = !project.isDone;
+    const startDate = new Date(project.createdAt);
+    const timeElapsed = timeSince(project.createdAt);
+
+    container.innerHTML = `
+        <h3>${isPending ? 'Current Project' : 'Latest Project'}</h3>
+        <h4>${project.object?.name || 'Unknown Project'}</h4>
+        ${isPending ? `
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span>IN PROGRESS</span>
+                    <span>${timeElapsed}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 50%"></div>
+                </div>
+                <p>Started: ${startDate.toLocaleDateString()}</p>
+            </div>
+        ` : `
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span>COMPLETED</span>
+                    <span>100%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 100%"></div>
+                </div>
+                <p>Completed: ${startDate.toLocaleDateString()}</p>
+            </div>
+        `}
+    `;
+}
+
+// Helper function to format time since
+function timeSince(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return `${seconds} seconds`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days`;
+    if (seconds < 2592000) return `${Math.floor(seconds / 604800)} weeks`;
+    return `${Math.floor(seconds / 2592000)} months`;
+}
