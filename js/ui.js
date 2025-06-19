@@ -1,5 +1,19 @@
 import { createXPChart, createAuditChart, createSkillsChart } from './charts.js';
 
+// Add formatBytes helper function at the top
+function formatBytes(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex++;
+    }
+
+    return `${value.toFixed(2)}${units[unitIndex]}`;
+}
+
 // Update profile UI with user data
 export function updateProfileUI(profileData) {
     const { userInfo, stats, projects, skills } = profileData;
@@ -14,10 +28,16 @@ export function updateProfileUI(profileData) {
 
     // Stats
     document.getElementById('level').textContent = userInfo.level;
-    document.getElementById('total-xp').textContent = stats.totalXP.toLocaleString();
+
+    // Format and display total XP with dynamic units and 2 decimal places
+    const formattedXP = formatBytes(stats.totalXP);
+    document.getElementById('total-xp').textContent = formattedXP;
+
     document.getElementById('projects-count').textContent = stats.completedProjects;
     document.getElementById('completed-projects').textContent = stats.completedProjects;
-    document.getElementById('audit-ratio').textContent = stats.auditRatio.toFixed(2);
+
+    // Format audit ratio with 1 decimal place
+    document.getElementById('audit-ratio').textContent = stats.auditRatio.toFixed(1);
 
     // Update rank
     updateRankInfo(userInfo.level);
@@ -39,12 +59,14 @@ export function updateProfileUI(profileData) {
 // Update rank information
 function updateRankInfo(level) {
     const ranks = [
-        { name: "Aspiring Developer", min: 0, max: 9 },
-        { name: "Beginner Developer", min: 10, max: 19 },
-        { name: "Junior Developer", min: 20, max: 29 },
-        { name: "Intermediate Developer", min: 30, max: 39 },
-        { name: "Advanced Developer", min: 40, max: 49 },
-        { name: "Senior Developer", min: 50, max: null }
+        { name: "Aspiring Developer", minLevel: 0, maxLevel: 9 },
+        { name: "Beginner Developer", minLevel: 10, maxLevel: 20 },
+        { name: "Apprentice Developer", minLevel: 20, maxLevel: 29 },
+        { name: "Assistant Developer", minLevel: 30, maxLevel: 39 },
+        { name: "Basic Developer", minLevel: 40, maxLevel: 49 },
+        { name: "Junior Developer", minLevel: 50, maxLevel: 54 },
+        { name: "Confirmed Developer", minLevel: 55, maxLevel: 59 },
+        { name: "Full-Stack Developer", minLevel: 60, maxLevel: null }
     ];
 
     const currentRank = ranks.find(r => level >= r.min && (r.max === null || level <= r.max)) || ranks[0];
