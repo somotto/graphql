@@ -311,10 +311,17 @@ body {
 }
 
 /* Chart Containers */
+#chart-tooltip {
+    z-index: 1000;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .chart-container {
-    height: 300px;
-    width: 100%;
     position: relative;
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
 }
 
 .audit-container {
@@ -383,6 +390,41 @@ body {
 .pending-project .time-elapsed {
     font-size: 0.875rem;
     color: var(--gray-dark);
+}
+
+/* Time Selector */
+.time-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.time-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--gray);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--dark);
+    transition: all 0.2s;
+}
+
+.time-button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.time-button:hover:not(.active) {
+    background: var(--gray);
+}
+
+.chart-area {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
 }
 
 /* Responsive Design */
