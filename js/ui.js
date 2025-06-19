@@ -66,18 +66,32 @@ function updateRankInfo(level) {
         { name: "Full-Stack Developer", minLevel: 60, maxLevel: null }
     ];
 
-    const currentRank = ranks.find(r => level >= r.min && (r.max === null || level <= r.max)) || ranks[0];
-    const nextRank = ranks[ranks.indexOf(currentRank) + 1];
+    // Find current rank based on level
+    const currentRank = ranks.find(r =>
+        level >= r.minLevel &&
+        (r.maxLevel === null || level <= r.maxLevel)
+    ) || ranks[0];
 
+    // Get next rank if exists
+    const nextRankIndex = ranks.indexOf(currentRank) + 1;
+    const nextRank = nextRankIndex < ranks.length ? ranks[nextRankIndex] : null;
+
+    // Update current rank display
     document.getElementById('current-rank').textContent = currentRank.name;
 
     if (nextRank) {
+        // Calculate progress to next rank
+        const levelRange = nextRank.minLevel - currentRank.minLevel;
+        const levelProgress = level - currentRank.minLevel;
+        const progress = (levelProgress / levelRange) * 100;
+
+        // Update UI elements
         document.getElementById('next-rank-name').textContent = nextRank.name;
-        const progress = ((level - currentRank.min) / (nextRank.min - currentRank.min)) * 100;
-        document.getElementById('xp-progress-bar').style.width = `${progress}%`;
-        document.getElementById('current-level').textContent = level - currentRank.min;
-        document.getElementById('next-level').textContent = nextRank.min - currentRank.min;
+        document.getElementById('xp-progress-bar').style.width = `${Math.min(progress, 100)}%`;
+        document.getElementById('current-level').textContent = levelProgress;
+        document.getElementById('next-level').textContent = levelRange;
     } else {
+        // Handle max rank case
         document.getElementById('next-rank-name').textContent = "Max Rank";
         document.getElementById('xp-progress-bar').style.width = '100%';
         document.getElementById('current-level').textContent = level;
