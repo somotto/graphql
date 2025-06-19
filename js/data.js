@@ -146,8 +146,10 @@ export async function getUserProfileData() {
     // Parse user attributes
     const attrs = typeof user.attrs === 'string' ? JSON.parse(user.attrs) : user.attrs || {};
 
-    // Calculate values
+    // Get total XP correctly from the aggregate query
     const totalXP = data.totalXP.aggregate.sum.amount || 0;
+
+    // Calculate values
     const upTotal = data.transaction_aggregate.aggregate.sum.amount || 0;
     const downTotal = data.downTransactions.aggregate.sum.amount || 0;
     const auditRatio = downTotal > 0 ? (upTotal / downTotal) : upTotal;
@@ -174,7 +176,7 @@ export async function getUserProfileData() {
         ...attrs,
         level: user.events[0]?.level || 1,
         createdAt: user.createdAt,
-        totalXP: totalXP // Add total XP to user info
+        totalXP: totalXP 
       },
       stats: {
         totalXP,
