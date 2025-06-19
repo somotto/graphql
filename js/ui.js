@@ -1,18 +1,5 @@
 import { createXPChart, createAuditChart, createSkillsChart } from './charts.js';
 
-// Add formatBytes helper function at the top
-function formatBytes(bytes) {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let value = bytes;
-    let unitIndex = 0;
-
-    while (value >= 1024 && unitIndex < units.length - 1) {
-        value /= 1024;
-        unitIndex++;
-    }
-
-    return `${value.toFixed(2)}${units[unitIndex]}`;
-}
 
 // Update profile UI with user data
 export function updateProfileUI(profileData) {
@@ -29,8 +16,8 @@ export function updateProfileUI(profileData) {
     // Stats
     document.getElementById('level').textContent = userInfo.level;
 
-    // Format and display total XP with dynamic units and 2 decimal places
-    const formattedXP = formatBytes(stats.totalXP);
+    // Format total XP in KB/MB
+    const formattedXP = formatXP(stats.totalXP);
     document.getElementById('total-xp').textContent = formattedXP;
 
     document.getElementById('projects-count').textContent = stats.completedProjects;
@@ -54,6 +41,16 @@ export function updateProfileUI(profileData) {
     // Set current project
     updateCurrentProject(projects.pending.length > 0 ? projects.pending[0] :
         projects.completed.length > 0 ? projects.completed[0] : null);
+}
+
+// Helper function to format XP in KB/MB
+function formatXP(xp) {
+    if (xp >= 1000000) {
+        return `${(xp / 1000000).toFixed(2)}MB`;
+    } else if (xp >= 1000) {
+        return `${Math.floor(xp / 1000)}kB`;
+    }
+    return `${xp}B`;
 }
 
 // Update rank information
