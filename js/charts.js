@@ -6,11 +6,11 @@ export function createXPChart(transactions) {
     const timeSelector = document.createElement("div")
     timeSelector.className = "time-selector"
     timeSelector.innerHTML = `
-          <button data-period="1" class="time-button active">1 Month</button>
-          <button data-period="3" class="time-button">3 Months</button>
-          <button data-period="6" class="time-button">6 Months</button>
-          <button data-period="all" class="time-button">All Time</button>
-      `
+            <button data-period="1" class="time-button active">1 Month</button>
+            <button data-period="3" class="time-button">3 Months</button>
+            <button data-period="6" class="time-button">6 Months</button>
+            <button data-period="all" class="time-button">All Time</button>
+        `
     container.appendChild(timeSelector)
 
     // Process and filter data based on time period
@@ -158,7 +158,7 @@ export function createXPChart(transactions) {
             point.setAttribute("stroke-width", "2")
             point.setAttribute(
                 "data-tooltip",
-                `XP: ${d.xp.toLocaleString()}\nGained: +${d.amount}\nDate: ${d.date.toLocaleDateString()}\nProject: ${d.path || "Unknown"}`,
+                `XP: ${formatXPForTooltip(d.xp)}\nGained: +${d.amount}\nDate: ${d.date.toLocaleDateString()}\nProject: ${d.path || "Unknown"}`,
             )
             addPointInteraction(point)
             svg.appendChild(point)
@@ -293,35 +293,6 @@ function createTimeGridAndAxes(minDate, maxDate, minXP, maxXP, chartLeft, chartR
     return group
 }
 
-function createLine(data, accessor, color) {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    const pathData = data
-        .map((d, i) => {
-            const x = 50 + (i / (data.length - 1)) * 700
-            const y = 350 - accessor(d) * (300 / Math.max(...data.map(accessor)))
-            return `${i === 0 ? "M" : "L"}${x},${y}`
-        })
-        .join(" ")
-
-    path.setAttribute("d", pathData)
-    path.setAttribute("stroke", color)
-    path.setAttribute("stroke-width", "3")
-    path.setAttribute("fill", "none")
-
-    return path
-}
-
-function createLegend() {
-    const group = document.createElementNS("http://www.w3.org/2000/svg", "g")
-    group.innerHTML = `
-          <rect x="600" y="20" width="15" height="15" fill="#4fd1c5"/>
-          <text x="625" y="33" fill="#2d3748">Your XP</text>
-          <rect x="600" y="45" width="15" height="15" fill="#805ad5"/>
-          <text x="625" y="58" fill="#2d3748">Average XP</text>
-      `
-    return group
-}
-
 // Tooltip helpers
 function showTooltip(event, text) {
     let tooltip = document.getElementById("chart-tooltip")
@@ -419,9 +390,9 @@ function getArcPath(percentage, offsetPercentage) {
     const largeArcFlag = percentage > 50 ? 1 : 0
 
     return `M ${centerX} ${centerY}
-              L ${startX} ${startY}
-              A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}
-              Z`
+                L ${startX} ${startY}
+                A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}
+                Z`
 }
 
 // Create skills radar chart
@@ -488,7 +459,7 @@ export function createSkillsChart(skills) {
     const points = skills
         .map((skill, i) => {
             const angle = i * angleStep
-            const value = Math.random() * 4 + 1 
+            const value = Math.random() * 4 + 1
             const x = 250 + value * 40 * Math.cos(angle)
             const y = 250 + value * 40 * Math.sin(angle)
             return `${x},${y}`
@@ -503,3 +474,13 @@ export function createSkillsChart(skills) {
 
     container.appendChild(svg)
 }
+
+// Helper function to format XP in tooltips consistently with the main display
+function formatXPForTooltip(xp) {
+    if (xp >= 1000000) {
+        return `${(xp / 1000000).toFixed(2)}MB`
+    } else if (xp >= 1000) {
+        return `${Math.floor(xp / 1000)}kB`
+    }
+    return `${xp}B`
+}  
