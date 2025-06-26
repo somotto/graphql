@@ -93,7 +93,6 @@ export async function fetchAllUserData() {
       }
       
       progress(where: {eventId: {_eq: 75}}) {
-        grade
         createdAt
         isDone
         object {
