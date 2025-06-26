@@ -395,86 +395,6 @@ function getArcPath(percentage, offsetPercentage) {
                 Z`
 }
 
-// Create skills radar chart
-export function createSkillsChart(skills) {
-    const container = document.getElementById("skills-chart")
-    container.innerHTML = ""
-
-    if (!skills || skills.length === 0) {
-        container.innerHTML = "<p>No skill data available</p>"
-        return
-    }
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-    svg.setAttribute("viewBox", "0 0 500 500")
-    svg.style.width = "100%"
-    svg.style.height = "100%"
-
-    // Add radar grid
-    const gridGroup = document.createElementNS("http://www.w3.org/2000/svg", "g")
-    for (let i = 1; i <= 5; i++) {
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle")
-        circle.setAttribute("cx", "250")
-        circle.setAttribute("cy", "250")
-        circle.setAttribute("r", i * 40)
-        circle.setAttribute("fill", "none")
-        circle.setAttribute("stroke", "#edf2f7")
-        circle.setAttribute("stroke-width", "1")
-        gridGroup.appendChild(circle)
-    }
-    svg.appendChild(gridGroup)
-
-    // Add axes
-    const axesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g")
-    const angleStep = (2 * Math.PI) / skills.length
-
-    skills.forEach((skill, i) => {
-        const angle = i * angleStep
-        const x = 250 + 200 * Math.cos(angle)
-        const y = 250 + 200 * Math.sin(angle)
-
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line")
-        line.setAttribute("x1", "250")
-        line.setAttribute("y1", "250")
-        line.setAttribute("x2", x.toString())
-        line.setAttribute("y2", y.toString())
-        line.setAttribute("stroke", "#cbd5e0")
-        line.setAttribute("stroke-width", "1")
-        axesGroup.appendChild(line)
-
-        const label = document.createElementNS("http://www.w3.org/2000/svg", "text")
-        label.setAttribute("x", (250 + 220 * Math.cos(angle)).toString())
-        label.setAttribute("y", (250 + 220 * Math.sin(angle)).toString())
-        label.setAttribute("text-anchor", "middle")
-        label.setAttribute("dominant-baseline", "middle")
-        label.setAttribute("fill", "#4a5568")
-        label.setAttribute("font-size", "12")
-        label.textContent = skill
-        axesGroup.appendChild(label)
-    })
-    svg.appendChild(axesGroup)
-
-    // Add data polygon (example with random values)
-    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon")
-    const points = skills
-        .map((skill, i) => {
-            const angle = i * angleStep
-            const value = Math.random() * 4 + 1
-            const x = 250 + value * 40 * Math.cos(angle)
-            const y = 250 + value * 40 * Math.sin(angle)
-            return `${x},${y}`
-        })
-        .join(" ")
-
-    polygon.setAttribute("points", points)
-    polygon.setAttribute("fill", "rgba(79, 209, 197, 0.4)")
-    polygon.setAttribute("stroke", "#4fd1c5")
-    polygon.setAttribute("stroke-width", "2")
-    svg.appendChild(polygon)
-
-    container.appendChild(svg)
-}
-
 // Helper function to format XP in tooltips consistently with the main display
 function formatXPForTooltip(xp) {
     if (xp >= 1000000) {
@@ -483,4 +403,4 @@ function formatXPForTooltip(xp) {
         return `${Math.floor(xp / 1000)}kB`
     }
     return `${xp}B`
-}  
+}
