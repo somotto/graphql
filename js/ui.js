@@ -1,9 +1,8 @@
-import { createXPChart, createAuditChart, createSkillsChart } from './charts.js';
-
+import { createXPChart, createAuditChart } from './charts.js';
 
 // Update profile UI with user data
 export function updateProfileUI(profileData) {
-    const { userInfo, stats, projects, skills } = profileData;
+    const { userInfo, stats, projects } = profileData;
 
     // Basic user info
     document.getElementById('profile-name').textContent = userInfo.login;
@@ -32,7 +31,6 @@ export function updateProfileUI(profileData) {
     // Create charts
     createXPChart(profileData.xpTransactions);
     createAuditChart(stats.upTotal, stats.downTotal);
-    createSkillsChart(skills);
 
     // Show projects
     displayProjects(projects.completed);
