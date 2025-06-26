@@ -109,7 +109,6 @@ function displayProjects(projects) {
     container.innerHTML = projects.map(project => `
         <div class="project-card">
             <h3>${project.object?.name || 'Unknown Project'}</h3>
-            <p>Grade: ${project.grade || 'N/A'}</p>
             <p>Completed: ${new Date(project.createdAt).toLocaleDateString()}</p>
         </div>
     `).join('');
