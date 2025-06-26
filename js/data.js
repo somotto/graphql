@@ -159,13 +159,6 @@ export async function getUserProfileData() {
     const completedProjects = projects.filter(p => p.isDone);
     const pendingProjects = projects.filter(p => !p.isDone);
 
-    // Process skills from transaction types
-    const skillTypes = [...new Set(
-      data.transaction
-        .filter(t => t.type && t.type !== 'xp')
-        .map(t => t.type)
-    )];
-
     // Get XP transactions for chart
     const xpTransactions = data.xpTransactions || [];
 
@@ -176,7 +169,7 @@ export async function getUserProfileData() {
         ...attrs,
         level: user.events[0]?.level || 1,
         createdAt: user.createdAt,
-        totalXP: totalXP 
+        totalXP: totalXP
       },
       stats: {
         totalXP,
@@ -190,7 +183,6 @@ export async function getUserProfileData() {
         completed: completedProjects,
         pending: pendingProjects
       },
-      skills: skillTypes,
       xpTransactions: xpTransactions
     };
 
