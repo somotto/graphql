@@ -26,8 +26,3 @@ This project displays user learning data from the Zone01 Kisumu learning platfor
 - Implements JWT authentication
 - Creates SVG charts for data visualization
 - Responsive design for all screen sizes
-
-## API Endpoints Used
-
-- Authentication: `https://learn.zone01kisumu.ke/api/auth/signin`
-- GraphQL: `https://learn.zone01kisumu.ke/api/graphql-engine/v1/graphql`
